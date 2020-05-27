@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-@Time          : 2020/05/06 15:07
-@Author        : Tianxiaomo
-@File          : train.py
-@Noice         :
-@Modificattion :
-    @Author    :
-    @Time      :
-    @Detail    :
 
 '''
 import torch
@@ -379,7 +371,7 @@ def get_args(**kwargs):
     parser.add_argument('-dir', '--data-dir', type=str, default=None,
                         help='dataset dir', dest='dataset_dir')
     parser.add_argument('-pretrained',type=str,default=None,help='pretrained yolov4.conv.137')
-    parser.add_argument('-classes',type=int,default=80,help='dataset classes')
+    parser.add_argument('-classes',type=int,default=1,help='dataset classes')
     parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
     args = vars(parser.parse_args())
 

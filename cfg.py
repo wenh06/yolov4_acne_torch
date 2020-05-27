@@ -28,7 +28,7 @@ Cfg.hue = .1
 Cfg.learning_rate = 0.00261
 Cfg.burn_in = 1000
 Cfg.max_batches = 500500
-Cfg.steps = [400000, 450000]
+Cfg.steps = [600000, 800000]
 Cfg.policy = Cfg.steps
 Cfg.scales = .1, .1
 
