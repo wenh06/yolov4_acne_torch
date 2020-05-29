@@ -20,7 +20,7 @@ from torch.nn import functional as F
 import numpy as np
 
 
-def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
+def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     """Calculate the Intersection of Unions (IoUs) between bounding boxes.
     IoU is calculated as a ratio of area of the intersection
     and area of the union.
@@ -41,40 +41,94 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
 
     from: https://github.com/chainer/chainercv
     """
+    assert iou.lower() in ['iou', 'giou', 'diou', 'ciou']
+    
     if bboxes_a.shape[1] != 4 or bboxes_b.shape[1] != 4:
         raise IndexError
 
     # top left
-    if xyxy:
-        tl = torch.max(bboxes_a[:, None, :2], bboxes_b[:, :2])
+    if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
+        # top left
+        tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
         # bottom right
-        br = torch.min(bboxes_a[:, None, 2:], bboxes_b[:, 2:])
+        br_intersect = torch.min(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
         area_a = torch.prod(bboxes_a[:, 2:] - bboxes_a[:, :2], 1)
         area_b = torch.prod(bboxes_b[:, 2:] - bboxes_b[:, :2], 1)
-    else:
-        tl = torch.max((bboxes_a[:, None, :2] - bboxes_a[:, None, 2:] / 2),
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right
-        br = torch.min((bboxes_a[:, None, :2] + bboxes_a[:, None, 2:] / 2),
+        br_intersect = torch.min((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
 
         area_a = torch.prod(bboxes_a[:, 2:], 1)
         area_b = torch.prod(bboxes_b[:, 2:], 1)
-    en = (tl < br).type(tl.type()).prod(dim=2)
-    area_i = torch.prod(br - tl, 2) * en  # * ((tl < br).all())
-    return area_i / (area_a[:, None] + area_b - area_i)
+    
+    # torch.prod(input, dim, keepdim=False, dtype=None) → Tensor
+    # Returns the product of each row of the input tensor in the given dimension dim
+    # if tl, br does not form a nondegenerate squre, then the corr. element in the `prod` would be 0
+    en = (tl_intersect < br_intersect).type(tl_intersect.type()).prod(dim=2)  # shape `(N,K,2)` ---> shape `(N,K)`
+
+    area_intersect = torch.prod(br_intersect - tl_intersect, 2) * en  # * ((tl < br).all())
+    area_union = (area_a[:, np.newaxis] + area_b - area_intersect)
+
+    iou = area_intersect / area_union
+
+    if iou_type.lower() == 'iou':
+        return iou
+
+    if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
+        # top left
+        tl_union = torch.min(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
+        # bottom right
+        br_union = torch.max(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        tl_union = torch.min((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
+                       (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
+        # bottom right
+        br_union = torch.max((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:] / 2),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
+    
+    # c for covering, of shape `(N,K,2)`
+    # the last dim is box width, box hight
+    bboxes_c = br_union - tl_union
+
+    area_covering = torch.prod(bboxes_c, 2)  # shape `(N,K)`
+
+    giou = iou - (area_covering - area_union) / area_covering
+
+    if iou_type.lower() == 'giou':
+        return giou
+
+    if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
+        centre_a = (bboxes_a[..., 2 :] + bboxes_a[..., : 2]) / 2
+        centre_b = (bboxes_b[..., 2 :] + bboxes_b[..., : 2]) / 2
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        centre_a = bboxes_a[..., : 2] + bboxes_a[..., 2 :]) / 2
+        centre_b = bboxes_b[..., : 2] + bboxes_b[..., 2 :]) / 2
+
+    centre_dist = torch.norm(centre_a[:, np.newaxis] - centre_b, p='fro', dim=2)
+    diag_len = torch.norm(bboxes_c, p='fro', dim=2)
+
+    diou = iou - centre_dist.pow(2) / diag_len.pow(2)
+
+    if iou_type.lower() == 'diou':
+        return diou
+
+    if iou_type.lower() == 'ciou':
+        raise NotImplementedError
 
 
-def bboxes_giou(bboxes_a, bboxes_b, xyxy=True):
-    pass
+def bboxes_giou(bboxes_a, bboxes_b, fmt='voc'):
+    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'giou')
 
 
-def bboxes_diou(bboxes_a, bboxes_b, xyxy=True):
-    pass
+def bboxes_diou(bboxes_a, bboxes_b, fmt='voc'):
+    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'diou')
 
 
-def bboxes_ciou(bboxes_a, bboxes_b, xyxy=True):
-    pass
+def bboxes_ciou(bboxes_a, bboxes_b, fmt='voc'):
+    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'ciou')
 
 
 class Yolo_loss(nn.Module):
