@@ -46,23 +46,27 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     if bboxes_a.shape[1] != 4 or bboxes_b.shape[1] != 4:
         raise IndexError
 
+    N, K = bboxes_a.shape[0], bboxes_b.shape[0]
+
     # top left
     if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
         # top left
         tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
         # bottom right
         br_intersect = torch.min(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
-        area_a = torch.prod(bboxes_a[:, 2:] - bboxes_a[:, :2], 1)
-        area_b = torch.prod(bboxes_b[:, 2:] - bboxes_b[:, :2], 1)
+        bb_a = bboxes_a[:, 2:] - bboxes_a[:, :2]
+        bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]
     elif fmt.lower() == 'coco':  # xmin, ymin, w, h
         tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right
         br_intersect = torch.min((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
+        bb_a = bboxes_a[:, 2:]
+        bb_b = bboxes_b[:, 2:]
 
-        area_a = torch.prod(bboxes_a[:, 2:], 1)
-        area_b = torch.prod(bboxes_b[:, 2:], 1)
+    area_a = torch.prod(bb_a, 1)
+    area_b = torch.prod(bb_b, 1)
     
     # torch.prod(input, dim, keepdim=False, dtype=None) → Tensor
     # Returns the product of each row of the input tensor in the given dimension dim
@@ -72,7 +76,7 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     area_intersect = torch.prod(br_intersect - tl_intersect, 2) * en  # * ((tl < br).all())
     area_union = (area_a[:, np.newaxis] + area_b - area_intersect)
 
-    iou = area_intersect / area_union
+    iou = torch.true_divide(area_intersect, area_union)
 
     if iou_type.lower() == 'iou':
         return iou
@@ -115,8 +119,16 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     if iou_type.lower() == 'diou':
         return diou
 
+    # bb_a of shape `(N,2)`, bb_b of shape `(K,2)`
+    v = torch.einsum('nm,km->nk', bb_a, bb_b)
+    v = torch.true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
+    v = torch.true_divide(2*torch.acos(v), np.pi).pow(2)
+    alpha = (iou>=0.5).type(iou.type())
+
+    ciou = diou - alpha * v
+
     if iou_type.lower() == 'ciou':
-        raise NotImplementedError
+        return ciou
 
 
 def bboxes_giou(bboxes_a, bboxes_b, fmt='voc'):
