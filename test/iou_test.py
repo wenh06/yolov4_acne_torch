@@ -116,15 +116,3 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
 
     if iou_type.lower() == 'ciou':
         return ciou
-
-
-def bboxes_giou(bboxes_a, bboxes_b, fmt='voc'):
-    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'giou')
-
-
-def bboxes_diou(bboxes_a, bboxes_b, fmt='voc'):
-    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'diou')
-
-
-def bboxes_ciou(bboxes_a, bboxes_b, fmt='voc'):
-    return bboxes_iou(bboxes_a, bboxes_b, fmt, 'ciou')
