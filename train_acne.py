@@ -14,7 +14,7 @@ from dataset import Yolo_dataset
 from cfg import Cfg
 from models import Yolov4
 import argparse
-from easydict import EasyDict as edict
+from easydict import EasyDict as ED
 from torch.nn import functional as F
 
 import numpy as np
@@ -108,8 +108,8 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         centre_a = (bboxes_a[..., 2 :] + bboxes_a[..., : 2]) / 2
         centre_b = (bboxes_b[..., 2 :] + bboxes_b[..., : 2]) / 2
     elif fmt.lower() == 'coco':  # xmin, ymin, w, h
-        centre_a = bboxes_a[..., : 2] + bboxes_a[..., 2 :]) / 2
-        centre_b = bboxes_b[..., : 2] + bboxes_b[..., 2 :]) / 2
+        centre_a = (bboxes_a[..., : 2] + bboxes_a[..., 2 :]) / 2
+        centre_b = (bboxes_b[..., : 2] + bboxes_b[..., 2 :]) / 2
 
     centre_dist = torch.norm(centre_a[:, np.newaxis] - centre_b, p='fro', dim=2)
     diag_len = torch.norm(bboxes_c, p='fro', dim=2)
@@ -450,7 +450,7 @@ def get_args(**kwargs):
 
     for k in args.keys():
         cfg[k] = args.get(k)
-    return edict(cfg)
+    return ED(cfg)
 
 
 def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', stdout=True):
