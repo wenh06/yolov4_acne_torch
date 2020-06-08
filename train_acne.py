@@ -121,7 +121,7 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     v = torch.einsum('nm,km->nk', bb_a, bb_b)
     v = torch.true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
     v = torch.true_divide(2*torch.acos(v), np.pi).pow(2)
-    alpha = (iou>=0.5).type(iou.type())
+    alpha = (torch.true_divide(v, 1-iou+v))*((iou>=0.5).type(iou.type()))
 
     ciou = diou - alpha * v
 
