@@ -10,7 +10,8 @@ from tensorboardX import SummaryWriter
 import logging
 import os, sys
 from tqdm import tqdm
-from dataset import Yolo_dataset
+# from dataset import Yolo_dataset
+from dataset_acne04 import ACNE04
 from cfg import Cfg
 from models import Yolov4
 import argparse
@@ -307,8 +308,12 @@ def collate(batch):
 
 
 def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
-    train_dataset = Yolo_dataset(config.train_label, config)
-    val_dataset = Yolo_dataset(config.val_label, config)
+    """
+    """
+    # train_dataset = Yolo_dataset(config.train_label, config)
+    # val_dataset = Yolo_dataset(config.val_label, config)
+    train_dataset = ACNE04()
+    val_dataset = ACNE04()  # TODO
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)
