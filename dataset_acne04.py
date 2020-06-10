@@ -19,7 +19,7 @@ from cfg import Cfg
 Cfg.dataset_dir = '/mnt/wenhao71/data/acne_article_data/filtered_images/'
 
 label_map_dict = ED({
-    'fore': 1,
+    'fore': 0,
 })
 
 

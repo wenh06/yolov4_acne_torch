@@ -12,7 +12,7 @@ import os, sys
 from tqdm import tqdm
 # from dataset import Yolo_dataset
 from dataset_acne04 import ACNE04
-from cfg import Cfg
+from cfg_acne04 import Cfg
 from models import Yolov4
 import argparse
 from easydict import EasyDict as ED
@@ -307,7 +307,7 @@ def collate(batch):
     return images, bboxes
 
 
-def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, img_scale=0.5):
+def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, logger=None, img_scale=0.5):
     """
     """
     # train_dataset = Yolo_dataset(config.train_label, config)
@@ -333,21 +333,22 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     max_itr = config.TRAIN_EPOCHS * n_train
     # global_step = cfg.TRAIN_MINEPOCH * n_train
     global_step = 0
-    logging.info(f'''Starting training:
-        Epochs:          {epochs}
-        Batch size:      {config.batch}
-        Subdivisions:    {config.subdivisions}
-        Learning rate:   {config.learning_rate}
-        Training size:   {n_train}
-        Validation size: {n_val}
-        Checkpoints:     {save_cp}
-        Device:          {device.type}
-        Images size:     {config.width}
-        Optimizer:       {config.TRAIN_OPTIMIZER}
-        Dataset classes: {config.classes}
-        Train label path:{config.train_label}
-        Pretrained:
-    ''')
+    if logger:
+        logger.info(f'''Starting training:
+            Epochs:          {epochs}
+            Batch size:      {config.batch}
+            Subdivisions:    {config.subdivisions}
+            Learning rate:   {config.learning_rate}
+            Training size:   {n_train}
+            Validation size: {n_val}
+            Checkpoints:     {save_cp}
+            Device:          {device.type}
+            Images size:     {config.width}
+            Optimizer:       {config.TRAIN_OPTIMIZER}
+            Dataset classes: {config.classes}
+            Train label path:{config.train_label}
+            Pretrained:
+        ''')
 
     # learning rate setup
     def burnin_schedule(i):
@@ -411,7 +412,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                                         'loss_l2': loss_l2.item(),
                                         'lr': scheduler.get_lr()[0] * config.batch
                                         })
-                    logging.debug('Train step_{}: loss : {},loss xy : {},loss wh : {},'
+                    if logger:
+                        logger.debug('Train step_{}: loss : {},loss xy : {},loss wh : {},'
                                   'loss obj : {}，loss cls : {},loss l2 : {},lr : {}'
                                   .format(global_step, loss.item(), loss_xy.item(),
                                           loss_wh.item(), loss_obj.item(),
@@ -423,11 +425,13 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             if save_cp:
                 try:
                     os.mkdir(config.checkpoints)
-                    logging.info('Created checkpoint directory')
+                    if logger:
+                        logger.info('Created checkpoint directory')
                 except OSError:
                     pass
                 torch.save(model.state_dict(), os.path.join(config.checkpoints, f'Yolov4_epoch{epoch + 1}.pth'))
-                logging.info(f'Checkpoint {epoch + 1} saved !')
+                if logger:
+                    logger.info(f'Checkpoint {epoch + 1} saved !')
 
     writer.close()
 
@@ -442,7 +446,7 @@ def get_args(**kwargs):
                         help='Learning rate', dest='learning_rate')
     parser.add_argument('-f', '--load', dest='load', type=str, default=None,
                         help='Load model from a .pth file')
-    parser.add_argument('-g', '--gpu', metavar='G', type=str, default='-1',
+    parser.add_argument('-g', '--gpu', metavar='G', type=str, default='1',
                         help='GPU', dest='gpu')
     parser.add_argument('-dir', '--data-dir', type=str, default=None,
                         help='dataset dir', dest='dataset_dir')
@@ -451,8 +455,7 @@ def get_args(**kwargs):
     parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
     args = vars(parser.parse_args())
 
-    for k in args.keys():
-        cfg[k] = args.get(k)
+    cfg.update(args)
     return ED(cfg)
 
 
@@ -466,7 +469,7 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d_%H-%M-%S')
 
-    fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
+    # fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
     if log_dir is None:
         log_dir = '~/temp/log/'
     if log_file is None:
@@ -474,31 +477,48 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_file = os.path.join(log_dir, log_file)
+
+    logger = logging.getLogger('Yolov4-ACNE04')
+
+    c_handler = logging.StreamHandler(sys.stdout)
+    f_handler = logging.FileHandler(log_file)
+
+    c_handler.setLevel(log_level)
+    f_handler.setLevel(min(log_level - 10, logging.DEBUG))
     # 此处不能使用logging输出
     print('log file path:' + log_file)
 
-    logging.basicConfig(level=logging.DEBUG,
-                        format=fmt,
-                        filename=log_file,
-                        filemode=mode)
+    c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    c_handler.setFormatter(c_format)
+    f_handler.setFormatter(f_format)
 
-    if stdout:
-        console = logging.StreamHandler(stream=sys.stdout)
-        console.setLevel(log_level)
-        formatter = logging.Formatter(fmt)
-        console.setFormatter(formatter)
-        logging.getLogger('').addHandler(console)
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
 
-    return logging
+    # logging.basicConfig(level=logging.DEBUG,
+    #                     format=fmt,
+    #                     filename=log_file,
+    #                     filemode=mode)
+
+    # if stdout:
+    #     console = logging.StreamHandler(stream=sys.stdout)
+    #     console.setLevel(log_level)
+    #     formatter = logging.Formatter(fmt)
+    #     console.setFormatter(formatter)
+    #     logging.getLogger('').addHandler(console)
+
+    return logger
 
 
 if __name__ == "__main__":
-    logging = init_logger(log_dir='log')
+    log_dir = "/mnt/wenhao71/"  # not finished
+    logger = init_logger(log_dir=log_dir)
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logging.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
-    logging.info(f'Using device {device}')
+    logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
+    logger.info(f'Using device {device}')
 
     model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
 
@@ -513,7 +533,7 @@ if __name__ == "__main__":
               device=device, )
     except KeyboardInterrupt:
         torch.save(model.state_dict(), 'INTERRUPTED.pth')
-        logging.info('Saved interrupt')
+        logger.info('Saved interrupt')
         try:
             sys.exit(0)
         except SystemExit:
