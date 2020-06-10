@@ -42,18 +42,24 @@ def ACNE04(Yolo_dataset):
         df_ann = pd.read_csv(lable_path)
         df_ann = df_ann[df_ann['class'].isin(label_map_dict.keys())].reset_index(drop=True)
 
-        df_ann['xcen'] = df_ann.apply(lambda row: (row['xmax']+row['xmin'])/2/row['width'], axis=1)
-        df_ann['ycen'] = df_ann.apply(lambda row: (row['ymax']+row['ymin'])/2/row['height'], axis=1)
-        df_ann['box_width'] = df_ann['box_width'] / df_ann['width']
-        df_ann['box_height'] = df_ann['box_height'] / df_ann['height']
+        # NOTE that the annotations used in this project are NOT in Yolo format, but in VOC format
+        # ref Use_yolov4_to_train_your_own_data.md
+
+        # df_ann['xcen'] = df_ann.apply(lambda row: (row['xmax']+row['xmin'])/2/row['width'], axis=1)
+        # df_ann['ycen'] = df_ann.apply(lambda row: (row['ymax']+row['ymin'])/2/row['height'], axis=1)
+        # df_ann['box_width'] = df_ann['box_width'] / df_ann['width']
+        # df_ann['box_height'] = df_ann['box_height'] / df_ann['height']
         df_ann['class_index'] = df_ann['class'].apply(lambda c: label_map_dict[c])
 
         # each item of `truth` is of the form
         # key: filename of the image
-        # (? to check)value: list of annotations of yolo format [class_index, xcen, ycen, w, h]
-        truth = {k: [] for k in df_ann['filename'].tolist()}
-        for _, row in df_ann.iterrows():
-            truth[row['filename']].append(row[['class_index', 'xcen', 'ycen', 'box_width', 'box_height']].tolist())
+        # value: list of annotations in the format [xmin, ymin, xmax, ymax, class_index]
+        # truth = {k: [] for k in df_ann['filename'].tolist()}
+        truth = {}
+        for fn, df in df_ann.groupby("filename"):
+            truth[fn] = df[['xmin', 'ymin', 'xmax', 'ymax', 'class_index']].values.astype(int).tolist()
+        # for _, row in df_ann.iterrows():
+        #     truth[row['filename']].append(row[['xmin', 'ymin', 'xmax', 'ymax', 'class_index']].tolist())
 
         # f = open(lable_path, 'r', encoding='utf-8')
         # for line in f.readlines():
