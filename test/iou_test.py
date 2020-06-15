@@ -12,7 +12,8 @@ import numpy as np
 
 def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     """
-    test function for bboxes_iou, adding message print and plot
+    test function for the bboxes_iou function in `train_acne.py`,
+    with message printing and plot
     """
     if 'plt' not in dir():
         import matplotlib.pyplot as plt
@@ -186,3 +187,50 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         return giou
     elif iou_type.lower() == 'iou':
         return iou
+
+
+def original_iou_test(bboxes_a, bboxes_b, xyxy=True):
+    """
+    test function for the original iou function in `train.py`
+    """
+    if bboxes_a.shape[1] != 4 or bboxes_b.shape[1] != 4:
+        raise IndexError
+
+    if isinstance(bboxes_a, np.ndarray):
+        bboxes_a = torch.Tensor(bboxes_a)
+    if isinstance(bboxes_b, np.ndarray):
+        bboxes_b = torch.Tensor(bboxes_a)
+    
+    N, K = bboxes_a.shape[0], bboxes_b.shape[0]
+    # if N, K all equal 1, then plot
+    
+    # top left
+    if xyxy:
+        tl = torch.max(bboxes_a[:, None, :2], bboxes_b[:, :2])
+        # bottom right
+        br = torch.min(bboxes_a[:, None, 2:], bboxes_b[:, 2:])
+        area_a = torch.prod(bboxes_a[:, 2:] - bboxes_a[:, :2], 1)
+        area_b = torch.prod(bboxes_b[:, 2:] - bboxes_b[:, :2], 1)
+    else:
+        tl = torch.max((bboxes_a[:, None, :2] - bboxes_a[:, None, 2:] / 2),
+                       (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
+        # bottom right
+        br = torch.min((bboxes_a[:, None, :2] + bboxes_a[:, None, 2:] / 2),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
+
+        area_a = torch.prod(bboxes_a[:, 2:], 1)
+        area_b = torch.prod(bboxes_b[:, 2:], 1)
+    en = (tl < br).type(tl.type()).prod(dim=2)
+    area_i = torch.prod(br - tl, 2) * en  # * ((tl < br).all())
+
+    print(f"tl.shape = {tl.shape}")
+    print(f"br.shape = {br.shape}")
+    print(f"area_a.shape = {area_a.shape}")
+    print(f"area_b.shape = {area_b.shape}")
+    print(f"en.shape = {en.shape}")
+    print(f"area_i.shape = {area_i.shape}")
+
+    if N == K == 1:
+        pass
+
+    return area_i / (area_a[:, None] + area_b - area_i)
