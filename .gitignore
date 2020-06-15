@@ -13,3 +13,7 @@ log
 
 *.jpg
 data/outcome
+
+saved_models/
+checkpoints/
+log/

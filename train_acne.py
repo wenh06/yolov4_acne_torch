@@ -512,7 +512,7 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
 
 
 if __name__ == "__main__":
-    log_dir = "/mnt/wenhao71/"  # not finished
+    log_dir = "/mnt/wenhao71/workspace/yolov4_acne_torch/log/"
     logger = init_logger(log_dir=log_dir)
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu

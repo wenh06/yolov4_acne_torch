@@ -36,8 +36,8 @@ Cfg.blur = 0
 Cfg.gaussian = 0
 Cfg.boxes = 120  # box num
 Cfg.TRAIN_EPOCHS = 300000
-Cfg.train_label = '/mnt/wenhao71/'  # not finished
-Cfg.val_label = '/mnt/wenhao71/'  # not finished
+Cfg.train_label = '/mnt/wenhao71/data/acne_article_data/train.csv'
+Cfg.val_label = '/mnt/wenhao71/data/acne_article_data/val.csv'
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 image_path1 x1,y1,x2,y2,id x1,y1,x2,y2,id x1,y1,x2,y2,id ...
@@ -53,5 +53,5 @@ elif Cfg.mosaic:
     Cfg.mixup = 3
 
 # Cfg.checkpoints = 'checkpoints'
-Cfg.checkpoints = '/mnt/wenhao71/'  # not finished
-Cfg.TRAIN_TENSORBOARD_DIR = '/mnt/wenhao71/'  # not finished
+Cfg.checkpoints = '/mnt/wenhao71/workspace/yolov4_acne_torch/saved_models/'  # not finished
+Cfg.TRAIN_TENSORBOARD_DIR = '/mnt/wenhao71/workspace/yolov4_acne_torch/log/'  # not finished
