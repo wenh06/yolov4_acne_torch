@@ -10,7 +10,6 @@ import pycuda.driver as cuda
 import pycuda.autoinit
 
 from tool.utils import *
-from tool.torch_utils import *
 
 try:
     # Sometimes python2 does not understand FileNotFoundError
@@ -159,6 +158,14 @@ def detect(engine, context, buffers, image_src, image_size):
     trt_outputs[1] = trt_outputs[1].reshape(-1, 255, IN_IMAGE_H // 16, IN_IMAGE_W // 16)
     trt_outputs[2] = trt_outputs[2].reshape(-1, 255, IN_IMAGE_H // 32, IN_IMAGE_W // 32)
     '''
+    '''
+    print(trt_outputs[0])
+    print(trt_outputs[1])
+    print(trt_outputs[2])
+    print(trt_outputs[3])
+    print(trt_outputs[4])
+    print(trt_outputs[5])
+    '''
 
     h1 = IN_IMAGE_H // 8
     w1 = IN_IMAGE_W // 8
@@ -171,18 +178,15 @@ def detect(engine, context, buffers, image_src, image_size):
     trt_outputs = [
         [
             trt_outputs[0],
-            trt_outputs[1],
-            trt_outputs[2]
+            trt_outputs[1]
         ],
         [
-            trt_outputs[3],
+            trt_outputs[2],
+            trt_outputs[3]
+        ],
+        [
             trt_outputs[4],
             trt_outputs[5]
-        ],
-        [
-            trt_outputs[6],
-            trt_outputs[7],
-            trt_outputs[8]
         ]
     ]
 
@@ -195,19 +199,16 @@ def detect(engine, context, buffers, image_src, image_size):
 
     trt_outputs = [
         [
-            trt_outputs[0][1].reshape(-1, 3 * h1 * w1, 4),
-            trt_outputs[0][2].reshape(-1, 3 * h1 * w1, num_classes),
-            trt_outputs[0][0].reshape(-1, 3 * h1 * w1)
+            trt_outputs[0][1].reshape(-1, 3 * h1 * w1, num_classes, 4),
+            trt_outputs[0][0].reshape(-1, 3 * h1 * w1, num_classes)
         ],
         [
-            trt_outputs[1][1].reshape(-1, 3 * h2 * w2, 4),
-            trt_outputs[1][2].reshape(-1, 3 * h2 * w2, num_classes),
-            trt_outputs[1][0].reshape(-1, 3 * h2 * w2)
+            trt_outputs[1][1].reshape(-1, 3 * h2 * w2, num_classes, 4),
+            trt_outputs[1][0].reshape(-1, 3 * h2 * w2, num_classes)
         ],
         [
-            trt_outputs[2][1].reshape(-1, 3 * h3 * w3, 4),
-            trt_outputs[2][2].reshape(-1, 3 * h3 * w3, num_classes),
-            trt_outputs[2][0].reshape(-1, 3 * h3 * w3)
+            trt_outputs[2][1].reshape(-1, 3 * h3 * w3, num_classes, 4),
+            trt_outputs[2][0].reshape(-1, 3 * h3 * w3, num_classes)
         ]
     ]
 

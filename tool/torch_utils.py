@@ -4,7 +4,6 @@ import time
 import math
 import torch
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 from torch.autograd import Variable
 
 import itertools
@@ -234,6 +233,8 @@ def yolo_forward(output, conf_thresh, num_classes, anchors, num_anchors, only_ob
     # Prepare C-x, C-y, P-w, P-h (None of them are torch related)
     grid_x = np.expand_dims(np.expand_dims(np.expand_dims(np.linspace(0, W - 1, W), axis=0).repeat(H, 0), axis=0), axis=0)
     grid_y = np.expand_dims(np.expand_dims(np.expand_dims(np.linspace(0, H - 1, H), axis=1).repeat(W, 1), axis=0), axis=0)
+    # grid_x = torch.linspace(0, W - 1, W).reshape(1, 1, 1, W).repeat(1, 1, H, 1)
+    # grid_y = torch.linspace(0, H - 1, H).reshape(1, 1, H, 1).repeat(1, 1, 1, W)
 
     anchor_w = []
     anchor_h = []
@@ -255,9 +256,9 @@ def yolo_forward(output, conf_thresh, num_classes, anchors, num_anchors, only_ob
     for i in range(num_anchors):
         ii = i * 2
         # Shape: [batch, 1, H, W]
-        bx = bxy[:, ii] + torch.tensor(grid_x, device=device, dtype=torch.float32)
+        bx = bxy[:, ii] + torch.tensor(grid_x, device=device, dtype=torch.float32) # grid_x.to(device=device, dtype=torch.float32)
         # Shape: [batch, 1, H, W]
-        by = bxy[:, ii + 1] + torch.tensor(grid_y, device=device, dtype=torch.float32)
+        by = bxy[:, ii + 1] + torch.tensor(grid_y, device=device, dtype=torch.float32) # grid_y.to(device=device, dtype=torch.float32)
         # Shape: [batch, 1, H, W]
         bw = bwh[:, ii] * anchor_w[i]
         # Shape: [batch, 1, H, W]
@@ -294,14 +295,22 @@ def yolo_forward(output, conf_thresh, num_classes, anchors, num_anchors, only_ob
     bw = bw.view(batch, num_anchors * H * W, 1)
     bh = bh.view(batch, num_anchors * H * W, 1)
 
-    # Shape: [batch, num_anchors * h * w, 4]
-    boxes = torch.cat((bx, by, bw, bh), dim=2).clamp(-10.0, 10.0)
-
+    # Shape: [batch, num_anchors * h * w, 1, 4]
+    boxes = torch.cat((bx, by, bw, bh), dim=2).view(batch, num_anchors * H * W, 1, 4)
     # Shape: [batch, num_anchors * h * w, num_classes, 4]
-    # boxes = boxes.view(N, num_anchors * H * W, 1, 4).expand(N, num_anchors * H * W, num_classes, 4)
+    boxes = boxes.repeat([1, 1, num_classes, 1])
 
+    # boxes:     [batch, num_anchors * H * W, num_classes, 4]
+    # cls_confs: [batch, num_anchors * H * W, num_classes]
+    # det_confs: [batch, num_anchors * H * W]
 
-    return  boxes, cls_confs, det_confs
+    det_confs = det_confs.view(batch, num_anchors * H * W, 1)
+    confs = cls_confs * det_confs
+
+    # boxes: [batch, num_anchors * H * W, num_classes, 4]
+    # confs: [batch, num_anchors * H * W, num_classes]
+
+    return  boxes, confs
 
 
 
@@ -310,14 +319,7 @@ def do_detect(model, img, conf_thresh, n_classes, nms_thresh, use_cuda=1):
     model.eval()
     t0 = time.time()
 
-    if isinstance(img, Image.Image):
-        width = img.width
-        height = img.height
-        img = torch.ByteTensor(torch.ByteStorage.from_buffer(img.tobytes()))
-        img = img.view(height, width, 3).transpose(0, 1).transpose(0, 2).contiguous()
-        img = img.view(1, 3, height, width)
-        img = img.float().div(255.0)
-    elif type(img) == np.ndarray and len(img.shape) == 3:  # cv2 image
+    if type(img) == np.ndarray and len(img.shape) == 3:  # cv2 image
         img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
     elif type(img) == np.ndarray and len(img.shape) == 4:
         img = torch.from_numpy(img.transpose(0, 3, 1, 2)).float().div(255.0)
@@ -340,7 +342,6 @@ def do_detect(model, img, conf_thresh, n_classes, nms_thresh, use_cuda=1):
         output.append([])
         output[-1].append(boxes_and_confs[i][0].cpu().detach().numpy())
         output[-1].append(boxes_and_confs[i][1].cpu().detach().numpy())
-        output[-1].append(boxes_and_confs[i][2].cpu().detach().numpy())
 
     t2 = time.time()
 

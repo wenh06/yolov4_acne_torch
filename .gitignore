@@ -3,6 +3,7 @@ ttest
 *.pth
 *.onnx
 *.engine
+*.pyc
 
 __pycache__
 .idea
@@ -10,7 +11,5 @@ __pycache__
 runs
 log
 
-predictions.jpg
-predictions_onnx.jpg
-predictions_trt.jpg
+*.jpg
 data/outcome
