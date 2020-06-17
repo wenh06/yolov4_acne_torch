@@ -20,7 +20,7 @@ from torch.nn import functional as F
 
 import numpy as np
 
-from utils.utils_iou import (
+from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
 
