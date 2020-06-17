@@ -7,7 +7,6 @@ import cv2
 import onnxruntime
 
 from tool.utils import *
-from tool.torch_utils import *
 from tool.darknet2onnx import *
 
 
@@ -41,33 +40,12 @@ def detect(session, image_src):
 
     # Compute
     input_name = session.get_inputs()[0].name
-    # output, output_exist = session.run(['decoder.output_conv', 'lane_exist.linear2'], {"input.1": image_np})
-
-    # print(img_in)
 
     outputs = session.run(None, {input_name: img_in})
 
-    '''
-    print(len(outputs))
-    print(outputs[0].shape)
-    print(outputs[1].shape)
-    print(outputs[2].shape)
-    print(outputs[3].shape)
-    print(outputs[4].shape)
-    print(outputs[5].shape)
-    '''
-
-    outputs = [
-        [outputs[0],outputs[1]],
-        [outputs[2],outputs[3]],
-        [outputs[4],outputs[5]]
-    ]
-
-    # print(outputs[2])
+    boxes = post_processing(img_in, 0.4, 0.6, outputs[0])
 
     num_classes = 80
-    boxes = post_processing(img_in, 0.5, num_classes, 0.4, outputs)
-
     if num_classes == 20:
         namesfile = 'data/voc.names'
     elif num_classes == 80:
@@ -76,7 +54,7 @@ def detect(session, image_src):
         namesfile = 'data/names'
 
     class_names = load_class_names(namesfile)
-    plot_boxes_cv2(image_src, boxes, savename='predictions_onnx.jpg', class_names=class_names)
+    plot_boxes_cv2(image_src, boxes[0], savename='predictions_onnx.jpg', class_names=class_names)
 
 
 

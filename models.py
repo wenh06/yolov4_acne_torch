@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from tool.torch_utils import *
 from tool.yolo_layer import YoloLayer
 
 
@@ -17,10 +18,19 @@ class Upsample(nn.Module):
     def __init__(self):
         super(Upsample, self).__init__()
 
-    def forward(self, x, target_size):
+    def forward(self, x, target_size, inference=False):
         assert (x.data.dim() == 4)
-        _, _, H, W = target_size
-        return F.interpolate(x, size=(H, W), mode='nearest')
+        _, _, tH, tW = target_size
+
+        if inference:
+            B = x.data.size(0)
+            C = x.data.size(1)
+            H = x.data.size(2)
+            W = x.data.size(3)
+
+            return x.view(B, C, H, 1, W, 1).expand(B, C, H, tH // H, W, tW // W).contiguous().view(B, C, tH, tW)
+        else:
+            return F.interpolate(x, size=(tH, tW), mode='nearest')
 
 
 class Conv_Bn_Activation(nn.Module):
@@ -224,8 +234,10 @@ class DownSample5(nn.Module):
 
 
 class Neck(nn.Module):
-    def __init__(self):
+    def __init__(self, inference=False):
         super().__init__()
+        self.inference = inference
+
         self.conv1 = Conv_Bn_Activation(1024, 512, 1, 1, 'leaky')
         self.conv2 = Conv_Bn_Activation(512, 1024, 3, 1, 'leaky')
         self.conv3 = Conv_Bn_Activation(1024, 512, 1, 1, 'leaky')
@@ -262,7 +274,7 @@ class Neck(nn.Module):
         self.conv19 = Conv_Bn_Activation(128, 256, 3, 1, 'leaky')
         self.conv20 = Conv_Bn_Activation(256, 128, 1, 1, 'leaky')
 
-    def forward(self, input, downsample4, downsample3):
+    def forward(self, input, downsample4, downsample3, inference=False):
         x1 = self.conv1(input)
         x2 = self.conv2(x1)
         x3 = self.conv3(x2)
@@ -277,7 +289,7 @@ class Neck(nn.Module):
         x6 = self.conv6(x5)
         x7 = self.conv7(x6)
         # UP
-        up = self.upsample1(x7, downsample4.size())
+        up = self.upsample1(x7, downsample4.size(), self.inference)
         # R 85
         x8 = self.conv8(downsample4)
         # R -1 -3
@@ -291,7 +303,7 @@ class Neck(nn.Module):
         x14 = self.conv14(x13)
 
         # UP
-        up = self.upsample2(x14, downsample3.size())
+        up = self.upsample2(x14, downsample3.size(), self.inference)
         # R 54
         x15 = self.conv15(downsample3)
         # R -1 -3
@@ -306,15 +318,15 @@ class Neck(nn.Module):
 
 
 class Yolov4Head(nn.Module):
-    def __init__(self, output_ch, yolo_layer_included=False):
+    def __init__(self, output_ch, n_classes, inference=False):
         super().__init__()
-        self.yolo_layer_included = yolo_layer_included
+        self.inference = inference
 
         self.conv1 = Conv_Bn_Activation(128, 256, 3, 1, 'leaky')
         self.conv2 = Conv_Bn_Activation(256, output_ch, 1, 1, 'linear', bn=False, bias=True)
 
         self.yolo1 = YoloLayer(
-                                anchor_mask=[0, 1, 2], num_classes=80,
+                                anchor_mask=[0, 1, 2], num_classes=n_classes,
                                 anchors=[12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401],
                                 num_anchors=9, stride=8)
 
@@ -331,7 +343,7 @@ class Yolov4Head(nn.Module):
         self.conv10 = Conv_Bn_Activation(512, output_ch, 1, 1, 'linear', bn=False, bias=True)
         
         self.yolo2 = YoloLayer(
-                                anchor_mask=[3, 4, 5], num_classes=80,
+                                anchor_mask=[3, 4, 5], num_classes=n_classes,
                                 anchors=[12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401],
                                 num_anchors=9, stride=16)
 
@@ -348,7 +360,7 @@ class Yolov4Head(nn.Module):
         self.conv18 = Conv_Bn_Activation(1024, output_ch, 1, 1, 'linear', bn=False, bias=True)
         
         self.yolo3 = YoloLayer(
-                                anchor_mask=[6, 7, 8], num_classes=80,
+                                anchor_mask=[6, 7, 8], num_classes=n_classes,
                                 anchors=[12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401],
                                 num_anchors=9, stride=32)
 
@@ -380,12 +392,12 @@ class Yolov4Head(nn.Module):
         x17 = self.conv17(x16)
         x18 = self.conv18(x17)
         
-        if self.yolo_layer_included:
+        if self.inference:
             y1 = self.yolo1(x2)
             y2 = self.yolo2(x10)
             y3 = self.yolo3(x18)
 
-            return [y1, y2, y3]
+            return get_region_boxes([y1, y2, y3])
         
         else:
             return [x2, x10, x18]
@@ -393,7 +405,7 @@ class Yolov4Head(nn.Module):
 
 
 class Yolov4(nn.Module):
-    def __init__(self, yolov4conv137weight=None, n_classes=80, yolo_layer_included=False):
+    def __init__(self, yolov4conv137weight=None, n_classes=80, inference=False):
         super().__init__()
 
         output_ch = (4 + 1 + n_classes) * 3
@@ -405,10 +417,10 @@ class Yolov4(nn.Module):
         self.down4 = DownSample4()
         self.down5 = DownSample5()
         # neck
-        self.neck = Neck()
+        self.neek = Neck(inference)
         # yolov4conv137
         if yolov4conv137weight:
-            _model = nn.Sequential(self.down1, self.down2, self.down3, self.down4, self.down5, self.neck)
+            _model = nn.Sequential(self.down1, self.down2, self.down3, self.down4, self.down5, self.neek)
             pretrained_dict = torch.load(yolov4conv137weight)
 
             model_dict = _model.state_dict()
@@ -419,7 +431,7 @@ class Yolov4(nn.Module):
             _model.load_state_dict(model_dict)
         
         # head
-        self.head = Yolov4Head(output_ch, yolo_layer_included)
+        self.head = Yolov4Head(output_ch, n_classes, inference)
 
 
     def forward(self, input):
@@ -429,7 +441,7 @@ class Yolov4(nn.Module):
         d4 = self.down4(d3)
         d5 = self.down5(d4)
 
-        x20, x13, x6 = self.neck(d5, d4, d3)
+        x20, x13, x6 = self.neek(d5, d4, d3)
 
         output = self.head(x20, x13, x6)
         return output
@@ -440,23 +452,48 @@ if __name__ == "__main__":
     import cv2
 
     namesfile = None
-    if len(sys.argv) == 4:
+    if len(sys.argv) == 6:
         n_classes = int(sys.argv[1])
         weightfile = sys.argv[2]
         imgfile = sys.argv[3]
-    elif len(sys.argv) == 5:
+        height = int(sys.argv[4])
+        width = int(sys.argv[5])
+    elif len(sys.argv) == 7:
         n_classes = int(sys.argv[1])
         weightfile = sys.argv[2]
         imgfile = sys.argv[3]
-        namesfile = sys.argv[4]
+        height = sys.argv[4]
+        width = int(sys.argv[5])
+        namesfile = int(sys.argv[6])
     else:
         print('Usage: ')
         print('  python models.py num_classes weightfile imgfile namefile')
 
-    model = Yolov4(n_classes=n_classes, yolo_layer_included=True)
+    model = Yolov4(yolov4conv137weight=None, n_classes=n_classes, inference=True)
 
-    pretrained_dict = torch.load(weightfile, map_location=torch.device('cpu'))
+    pretrained_dict = torch.load(weightfile, map_location=torch.device('cuda'))
     model.load_state_dict(pretrained_dict)
+
+    use_cuda = True
+    if use_cuda:
+        model.cuda()
+
+    img = cv2.imread(imgfile)
+
+    # Inference input size is 416*416 does not mean training size is the same
+    # Training size could be 608*608 or even other sizes
+    # Optional inference sizes:
+    #   Hight in {320, 416, 512, 608, ... 320 + 96 * n}
+    #   Width in {320, 416, 512, 608, ... 320 + 96 * m}
+    sized = cv2.resize(img, (width, height))
+    sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
+
+    from tool.utils import load_class_names, plot_boxes_cv2
+    from tool.torch_utils import do_detect
+
+    for i in range(2):  # This 'for' loop is for speed check
+                        # Because the first iteration is usually longer
+        boxes = do_detect(model, sized, 0.4, 0.6, use_cuda)
 
     if namesfile == None:
         if n_classes == 20:
@@ -466,18 +503,5 @@ if __name__ == "__main__":
         else:
             print("please give namefile")
 
-    use_cuda = 0
-    if use_cuda:
-        model.cuda()
-
-    img = cv2.imread(imgfile)
-    sized = cv2.resize(img, (608, 608))
-    sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
-
-    from tool.utils import load_class_names, plot_boxes_cv2
-    from tool.torch_utils import do_detect
-
-    boxes = do_detect(model, sized, 0.5, n_classes, 0.4, use_cuda)
-
     class_names = load_class_names(namesfile)
-    plot_boxes_cv2(img, boxes, 'predictions.jpg', class_names)
+    plot_boxes_cv2(img, boxes[0], 'predictions.jpg', class_names)

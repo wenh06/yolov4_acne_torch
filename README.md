@@ -16,16 +16,16 @@ A minimal PyTorch implementation of YOLOv4.
 
 ```
 ├── README.md
-├── dataset.py       dataset
-├── demo.py          demo to run pytorch --> tool/darknet2pytorch
-├── darknet2onnx.py  tool to convert into onnx --> tool/darknet2pytorch
-├── demo_onnx.py     demo to run the converted onnx model
-├── models.py        model for pytorch
-├── train.py         train models.py
-├── cfg.py           cfg.py for train
-├── cfg              cfg --> darknet2pytorch
+├── dataset.py            dataset
+├── demo.py               demo to run pytorch --> tool/darknet2pytorch
+├── demo_darknet2onnx.py  tool to convert into onnx --> tool/darknet2pytorch
+├── demo_pytorch2onnx.py  tool to convert into onnx
+├── models.py             model for pytorch
+├── train.py              train models.py
+├── cfg.py                cfg.py for train
+├── cfg                   cfg --> darknet2pytorch
 ├── data            
-├── weight           --> darknet2pytorch
+├── weight                --> darknet2pytorch
 ├── tool
 │   ├── camera.py           a demo camera
 │   ├── coco_annotatin.py       coco dataset generator
@@ -38,7 +38,7 @@ A minimal PyTorch implementation of YOLOv4.
 
 ![image](https://user-gold-cdn.xitu.io/2020/4/26/171b5a6c8b3bd513?w=768&h=576&f=jpeg&s=78882)
 
-# 0. Weight
+# 0. Weights Download
 
 ## 0.1 darkent
 - baidu(https://pan.baidu.com/s/1dAGEW8cm-dqK14TbhhVetA     Extraction code:dm5b)
@@ -76,13 +76,48 @@ you can use darknet2pytorch to convert it yourself, or download my converted mod
      python train.py -g [GPU_ID] -dir [Dataset direction] ...
     ```
 
-# 2. Inference
-- download model weight https://drive.google.com/open?id=1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT
-```
-python demo.py <cfgFile> <weightFile> <imgFile>
-```
+# 2. Inference (Evolving)
+
+- Image input size for inference
+
+    Image input size is NOT restricted in `320 * 320`, `416 * 416`, `512 * 512` and `608 * 608`.
+    You can adjust your input sizes for a different input ratio, for example: `320 * 608`.
+    Larger input size could help detect smaller targets, but may be slower and GPU memory exhausting.
+
+    ```py
+    height = 320 + 96 * n, n in {0, 1, 2, 3, ...}
+    width  = 320 + 96 * m, m in {0, 1, 2, 3, ...}
+    ```
+
+- **Different inference options**
+
+    - Load the pretrained darknet model and darknet weights to do the inference (image size is configured in cfg file already)
+
+        ```sh
+        python demo.py -cfgfile <cfgFile> -weightfile <weightFile> -imgfile <imgFile>
+        ```
+
+    - Load pytorch weights (pth file) to do the inference
+
+        ```sh
+        python models.py <num_classes> <weightfile> <imgfile> <IN_IMAGE_H> <IN_IMAGE_W> <namefile(optional)>
+        ```
+    
+    - Load converted ONNX file to do inference (See section 3 and 4)
+
+    - Load converted TensorRT engine file to do inference (See section 5)
+
+- Inference output
+
+    Inference output is of shape `[batch, num_boxes, 4 + num_classes]` in which `[batch, num_boxes, 4]` is x_center, y_center, width, height of bounding boxes, and `[batch, num_boxes, num_classes]` is confidences of bounding box for all classes.
+
+    Until now, still a small piece of post-processing including NMS is required. We are trying to minimize time and complexity of post-processing.
+
+
 
 # 3. Darknet2ONNX (Evolving)
+
+- **This script is to convert the official pretrained darknet model into ONNX**
 
 - **Pytorch version Recommended: 1.4.0**
 
@@ -92,38 +127,74 @@ python demo.py <cfgFile> <weightFile> <imgFile>
     pip install onnxruntime
     ```
 
-- **Run python script to generate onnx model and run the demo**
+- **Run python script to generate ONNX model and run the demo**
 
     ```sh
-    python demo_onnx.py <cfgFile> <weightFile> <imageFile> <batchSize>
+    python demo_darknet2onnx.py <cfgFile> <weightFile> <imageFile> <batchSize>
     ```
 
-  This script will generate 2 onnx models.
+  This script will generate 2 ONNX models.
 
   - One is for running the demo (batch_size=1)
   - The other one is what you want to generate (batch_size=batchSize)
 
-# 4. ONNX2TensorRT (Evolving)
+# 4. Pytorch2ONNX (Evolving)
+
+- **You can convert your trained pytorch model into ONNX using this script**
+
+- **Pytorch version Recommended: 1.4.0**
+
+- **Install onnxruntime**
+
+    ```sh
+    pip install onnxruntime
+    ```
+
+- **Run python script to generate ONNX model and run the demo**
+
+    ```sh
+    python demo_pytorch2onnx.py <weight_file> <image_path> <batch_size> <n_classes> <IN_IMAGE_H> <IN_IMAGE_W>
+    ```
+
+    For example:
+
+    ```sh
+    python demo_pytorch2onnx.py yolov4.pth dog.jpg 8 80 416 416
+    ```
+
+  This script will generate 2 ONNX models.
+
+  - One is for running the demo (batch_size=1)
+  - The other one is what you want to generate (batch_size=batch_size)
+
+
+# 5. ONNX2TensorRT (Evolving)
 
 - **TensorRT version Recommended: 7.0, 7.1**
 
-- **Run the following command to convert VOLOv4 onnx model into TensorRT engine**
+- **Run the following command to convert VOLOv4 ONNX model into TensorRT engine**
 
     ```sh
     trtexec --onnx=<onnx_file> --explicitBatch --saveEngine=<tensorRT_engine_file> --workspace=<size_in_megabytes> --fp16
     ```
     - Note: If you want to use int8 mode in conversion, extra int8 calibration is needed.
 
-- **Run the demo (this demo here only works when batchSize=1)**
+- **Run the demo**
 
     ```sh
     python demo_trt.py <tensorRT_engine_file> <input_image> <input_H> <input_W>
     ```
-    - Note1: input_H and input_W should agree with the input size in the original darknet cfg file as well as the latter onnx file.
-    - Note2: extra NMS operations are needed for the tensorRT output. This demo uses TianXiaomo's NMS code from `tool/utils.py`.
+
+    - This demo here only works when batchSize=1, but you can update this demo a little for batched inputs.
+    
+    - Note1: input_H and input_W should agree with the input size in the original ONNX file.
+    
+    - Note2: extra NMS operations are needed for the tensorRT output. This demo uses python NMS code from `tool/utils.py`.
+
+    - Inference on X86 is verified to be okay for TensorRT 7.0, but output of the first iteration each time engine is loaded may be wrong on Jetson platforms. If you are using Jetpack 4.4 DP on Jetson platforms, try to ignore the first iteration each time as a workaround.
 
 
-# 5. ONNX2Tensorflow
+# 6. ONNX2Tensorflow
 
 - **First:Conversion to ONNX**
 
