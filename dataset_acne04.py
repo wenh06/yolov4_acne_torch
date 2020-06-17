@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import pandas as pd
 import os
+from typing import Union
 # import matplotlib.pyplot as plt
 from easydict import EasyDict as ED
 
@@ -75,3 +76,40 @@ def ACNE04(Yolo_dataset):
 
         def __getitem__(self, index):
             return super().__getitem__(index)
+
+
+def train_val_test_split(df:pd.DataFrame, train_ratio:Union[int,float]=70, val_ratio:Union[int,float]=15, test_ratio:Union[int,float]=15) -> Tuple[pd.DataFrame,pd.DataFrame,pd.DataFrame]:
+    """
+    """
+    from random import shuffle
+    from functools import reduce
+
+    if isinstance(train_ratio, int):
+        train_ratio = train_ratio / 100
+        val_ratio = val_ratio / 100
+        test_ratio = test_ratio / 100
+    assert train_ratio+val_ratio+test_ratio == 1.0
+
+    all_files_by_level = {f"lv{i}": [] for i in range(4)}
+    for fn in df['filename'].unique():
+        all_files_by_level[f"lv{fn.split('_')[0][-1]}"].append(fn)
+    
+    train, val, test = ({f"lv{i}": [] for i in range(4)} for _ in range(3))
+    for i in range(4):
+        shuffle(all_files_by_level[f"lv{i}"])
+        lv_nb = len(all_files_by_level[f"lv{i}"])
+        train[f"lv{i}"] = all_files_by_level[f"lv{i}"][:int(train_ratio*lv_nb)]
+        val[f"lv{i}"] = all_files_by_level[f"lv{i}"][int(train_ratio*lv_nb): int((train_ratio+val_ratio)*lv_nb)]
+        test[f"lv{i}"] = all_files_by_level[f"lv{i}"][int((train_ratio+val_ratio)*lv_nb):]
+    train = reduce(lambda a,b: a+b, [v for _,v in train.items()])
+    val = reduce(lambda a,b: a+b, [v for _,v in val.items()])
+    test = reduce(lambda a,b: a+b, [v for _,v in test.items()])
+
+    for i in range(4):
+        print(f"lv{i}  ----- ", len(all_files_by_level[f"lv{i}"]))
+
+    df_train = df[df['filename'].isin(train)].reset_index(drop=True)
+    df_val = df[df['filename'].isin(val)].reset_index(drop=True)
+    df_test = df[df['filename'].isin(test)].reset_index(drop=True)
+
+    return df_train, df_val, df_test
