@@ -54,5 +54,7 @@ elif Cfg.mosaic:
     Cfg.mixup = 3
 
 # Cfg.checkpoints = 'checkpoints'
-Cfg.checkpoints = '/mnt/wenhao71/workspace/yolov4_acne_torch/saved_models/'  # not finished
-Cfg.TRAIN_TENSORBOARD_DIR = '/mnt/wenhao71/workspace/yolov4_acne_torch/log/'  # not finished
+Cfg.checkpoints = '/mnt/wenhao71/workspace/yolov4_acne_torch/saved_models/'
+Cfg.TRAIN_TENSORBOARD_DIR = '/mnt/wenhao71/workspace/yolov4_acne_torch/log/'
+
+Cfg.dataset_dir = '/mnt/wenhao71/data/acne_article_data/filtered_images/'

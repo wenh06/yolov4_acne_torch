@@ -14,7 +14,7 @@ from typing import Union, Tuple
 from easydict import EasyDict as ED
 
 from dataset import image_data_augmentation, Yolo_dataset
-from cfg import Cfg
+from cfg_acne04 import Cfg
 
 
 Cfg.dataset_dir = '/mnt/wenhao71/data/acne_article_data/filtered_images/'

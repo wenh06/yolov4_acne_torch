@@ -64,3 +64,5 @@ elif Cfg.mosaic:
 
 Cfg.checkpoints = 'checkpoints'
 Cfg.TRAIN_TENSORBOARD_DIR = 'log'
+
+Cfg.dataset_dir = ''

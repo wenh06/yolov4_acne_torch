@@ -201,15 +201,24 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     n_train = len(train_dataset)
     n_val = len(val_dataset)
 
-    train_loader = DataLoader(train_dataset, batch_size=config.batch // config.subdivisions, shuffle=True,
-                              num_workers=8, pin_memory=True, drop_last=True, collate_fn=collate)
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=config.batch // config.subdivisions,
+        shuffle=True, num_workers=8, pin_memory=True, drop_last=True,
+        collate_fn=collate,
+    )
 
-    val_loader = DataLoader(val_dataset, batch_size=config.batch // config.subdivisions, shuffle=True, num_workers=8,
-                            pin_memory=True, drop_last=True)
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=config.batch // config.subdivisions,
+        shuffle=True, num_workers=8, pin_memory=True, drop_last=True,
+    )
 
-    writer = SummaryWriter(log_dir=config.TRAIN_TENSORBOARD_DIR,
-                           filename_suffix=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
-                           comment=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}')
+    writer = SummaryWriter(
+        log_dir=config.TRAIN_TENSORBOARD_DIR,
+        filename_suffix=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
+        comment=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
+    )
     # writer.add_images('legend',
     #                   torch.from_numpy(train_dataset.label2colorlegend2(cfg.DATA_CLASSES).transpose([2, 0, 1])).to(
     #                       device).unsqueeze(0))
@@ -245,10 +254,19 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             factor = 0.01
         return factor
 
-    optimizer = optim.Adam(model.parameters(), lr=config.learning_rate / config.batch, betas=(0.9, 0.999), eps=1e-08)
+    optimizer = optim.Adam(
+        params=model.parameters(),
+        lr=config.learning_rate / config.batch,
+        betas=(0.9, 0.999),
+        eps=1e-08,
+    )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
 
-    criterion = Yolo_loss(device=device, batch=config.batch // config.subdivisions,n_classes=config.classes)
+    criterion = Yolo_loss(
+        n_classes=config.classes,
+        device=device,
+        batch=config.batch // config.subdivisions,
+    )
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
