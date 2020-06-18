@@ -5,6 +5,8 @@ ttest
 *.engine
 *.pyc
 
+.ipynb_checkpoints/
+
 __pycache__
 .idea
 .vscode
