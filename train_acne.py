@@ -10,7 +10,6 @@ from tensorboardX import SummaryWriter
 import logging
 import os, sys
 from tqdm import tqdm
-# from dataset import Yolo_dataset
 from dataset_acne04 import ACNE04
 from cfg_acne04 import Cfg
 from models import Yolov4
@@ -153,7 +152,9 @@ class Yolo_loss(nn.Module):
             pred[..., 2] = torch.exp(pred[..., 2]) * self.anchor_w[output_id]
             pred[..., 3] = torch.exp(pred[..., 3]) * self.anchor_h[output_id]
 
-            obj_mask, tgt_mask, tgt_scale, target = self.build_target(pred, labels, batchsize, fsize, n_ch, output_id)
+            obj_mask, tgt_mask, tgt_scale, target = self.build_target(
+                pred, labels, batchsize, fsize, n_ch, output_id
+            )
 
             # loss calculation
             output[..., 4] *= obj_mask
@@ -164,8 +165,12 @@ class Yolo_loss(nn.Module):
             target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
             target[..., 2:4] *= tgt_scale
 
-            loss_xy += F.binary_cross_entropy(input=output[..., :2], target=target[..., :2],
-                                              weight=tgt_scale * tgt_scale, size_average=False)
+            loss_xy += F.binary_cross_entropy(
+                input=output[..., :2],
+                target=target[..., :2],
+                weight=tgt_scale*tgt_scale,
+                size_average=False,
+            )
             loss_wh += F.mse_loss(input=output[..., 2:4], target=target[..., 2:4], size_average=False) / 2
             loss_obj += F.binary_cross_entropy(input=output[..., 4], target=target[..., 4], size_average=False)
             loss_cls += F.binary_cross_entropy(input=output[..., 5:], target=target[..., 5:], size_average=False)
@@ -193,8 +198,6 @@ def collate(batch):
 def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, logger=None, img_scale=0.5):
     """
     """
-    # train_dataset = Yolo_dataset(config.train_label, config)
-    # val_dataset = Yolo_dataset(config.val_label, config)
     train_dataset = ACNE04(config.train_label, config)
     val_dataset = ACNE04(config.val_label, config)
 
@@ -204,14 +207,20 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=config.batch // config.subdivisions,
-        shuffle=True, num_workers=8, pin_memory=True, drop_last=True,
+        shuffle=True,
+        num_workers=8,
+        pin_memory=True,
+        drop_last=False,
         collate_fn=collate,
     )
 
     val_loader = DataLoader(
         dataset=val_dataset,
         batch_size=config.batch // config.subdivisions,
-        shuffle=True, num_workers=8, pin_memory=True, drop_last=True,
+        shuffle=True,
+        num_workers=8,
+        pin_memory=True,
+        drop_last=False,
     )
 
     writer = SummaryWriter(
@@ -219,9 +228,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         filename_suffix=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
         comment=f'OPT_{config.TRAIN_OPTIMIZER}_LR_{config.learning_rate}_BS_{config.batch}_Sub_{config.subdivisions}_Size_{config.width}',
     )
-    # writer.add_images('legend',
-    #                   torch.from_numpy(train_dataset.label2colorlegend2(cfg.DATA_CLASSES).transpose([2, 0, 1])).to(
-    #                       device).unsqueeze(0))
+    
     max_itr = config.TRAIN_EPOCHS * n_train
     # global_step = cfg.TRAIN_MINEPOCH * n_train
     global_step = 0
