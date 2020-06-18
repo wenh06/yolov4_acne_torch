@@ -34,12 +34,13 @@ Cfg.h = Cfg.height
 Cfg.flip = 1
 Cfg.blur = 0
 Cfg.gaussian = 0
-Cfg.boxes = 120  # box num
+Cfg.boxes = 200  # box num
 Cfg.TRAIN_EPOCHS = 300000
 Cfg.train_label = '/mnt/wenhao71/data/acne_article_data/train.csv'
 Cfg.val_label = '/mnt/wenhao71/data/acne_article_data/val.csv'
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
+original data generator accepted format:
 image_path1 x1,y1,x2,y2,id x1,y1,x2,y2,id x1,y1,x2,y2,id ...
 image_path2 x1,y1,x2,y2,id x1,y1,x2,y2,id x1,y1,x2,y2,id ...
 ...

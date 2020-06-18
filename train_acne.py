@@ -195,8 +195,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     """
     # train_dataset = Yolo_dataset(config.train_label, config)
     # val_dataset = Yolo_dataset(config.val_label, config)
-    train_dataset = ACNE04()
-    val_dataset = ACNE04()  # TODO
+    train_dataset = ACNE04(config.train_label, config)
+    val_dataset = ACNE04(config.val_label, config)
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)
