@@ -17,3 +17,5 @@ data/outcome
 saved_models/
 checkpoints/
 log/
+
+pretrained/

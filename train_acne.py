@@ -239,7 +239,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             Optimizer:       {config.TRAIN_OPTIMIZER}
             Dataset classes: {config.classes}
             Train label path:{config.train_label}
-            Pretrained:
+            Pretrained:      {config.pretrained}
         ''')
 
     # learning rate setup
