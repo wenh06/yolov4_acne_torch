@@ -13,7 +13,7 @@ from typing import Union, Tuple
 # import matplotlib.pyplot as plt
 from easydict import EasyDict as ED
 
-from .dataset import image_data_augmentation, Yolo_dataset
+from dataset import image_data_augmentation, Yolo_dataset
 from cfg import Cfg
 
 
@@ -24,7 +24,7 @@ label_map_dict = ED({
 })
 
 
-def ACNE04(Yolo_dataset):
+class ACNE04(Yolo_dataset):
     """
     """
     def __init__(self, lable_path, cfg):
