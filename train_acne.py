@@ -338,6 +338,9 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
 
 def get_args(**kwargs):
+    """
+    """
+    pretrained_detector = '/mnt/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.pth'
     cfg = kwargs
     parser = argparse.ArgumentParser(description='Train the Model on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -345,15 +348,15 @@ def get_args(**kwargs):
     #                     help='Batch size', dest='batchsize')
     parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.001,
                         help='Learning rate', dest='learning_rate')
-    parser.add_argument('-f', '--load', dest='load', type=str, default=None,
+    parser.add_argument('-f', '--load', dest='load', type=str, default=pretrained_detector,
                         help='Load model from a .pth file')
     parser.add_argument('-g', '--gpu', metavar='G', type=str, default='1',
                         help='GPU', dest='gpu')
-    parser.add_argument('-dir', '--data-dir', type=str, default=None,
-                        help='dataset dir', dest='dataset_dir')
-    parser.add_argument('-pretrained',type=str,default=None,help='pretrained yolov4.conv.137')
+    # parser.add_argument('-dir', '--data-dir', type=str, default=None,
+                        # help='dataset dir', dest='dataset_dir')
+    # parser.add_argument('-pretrained',type=str,default=None,help='pretrained yolov4.conv.137')
     parser.add_argument('-classes',type=int,default=1,help='dataset classes')
-    parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
+    # parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
     args = vars(parser.parse_args())
 
     cfg.update(args)
@@ -413,13 +416,14 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
 
 
 if __name__ == "__main__":
-    log_dir = "/mnt/wenhao71/workspace/yolov4_acne_torch/log/"
-    logger = init_logger(log_dir=log_dir)
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    log_dir = cfg.TRAIN_TENSORBOARD_DIR
+    logger = init_logger(log_dir=log_dir)
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     logger.info(f'Using device {device}')
+    logger.info(f'with configuration {cfg}')
 
     model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
 
@@ -433,7 +437,7 @@ if __name__ == "__main__":
               epochs=cfg.TRAIN_EPOCHS,
               device=device, )
     except KeyboardInterrupt:
-        torch.save(model.state_dict(), 'INTERRUPTED.pth')
+        torch.save(model.state_dict(), os.path.join(cfg.checkpoints, 'INTERRUPTED.pth'))
         logger.info('Saved interrupt')
         try:
             sys.exit(0)
