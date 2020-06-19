@@ -407,18 +407,6 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
     logger.addHandler(c_handler)
     logger.addHandler(f_handler)
 
-    # logging.basicConfig(level=logging.DEBUG,
-    #                     format=fmt,
-    #                     filename=log_file,
-    #                     filemode=mode)
-
-    # if stdout:
-    #     console = logging.StreamHandler(stream=sys.stdout)
-    #     console.setLevel(log_level)
-    #     formatter = logging.Formatter(fmt)
-    #     console.setFormatter(formatter)
-    #     logging.getLogger('').addHandler(console)
-
     return logger
 
 
@@ -439,10 +427,12 @@ if __name__ == "__main__":
     model.to(device=device)
 
     try:
-        train(model=model,
-              config=cfg,
-              epochs=cfg.TRAIN_EPOCHS,
-              device=device, )
+        train(
+            model=model,
+            config=cfg,
+            epochs=cfg.TRAIN_EPOCHS,
+            device=device,
+        )
     except KeyboardInterrupt:
         torch.save(model.state_dict(), os.path.join(cfg.checkpoints, 'INTERRUPTED.pth'))
         logger.info('Saved interrupt')
