@@ -70,7 +70,7 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     area_intersect = torch.prod(br_intersect - tl_intersect, 2) * en  # * ((tl < br).all())
     area_union = (area_a[:, np.newaxis] + area_b - area_intersect)
 
-    iou = torch.true_divide(area_intersect, area_union)
+    iou = _true_divide(area_intersect, area_union)
 
     # if iou_type.lower() == 'iou':
     #     return iou
@@ -119,9 +119,9 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
 
     # bb_a of shape `(N,2)`, bb_b of shape `(K,2)`
     v = torch.einsum('nm,km->nk', bb_a, bb_b)
-    v = torch.true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
-    v = torch.true_divide(2*torch.acos(v), np.pi).pow(2)
-    alpha = (torch.true_divide(v, 1-iou+v))*((iou>=0.5).type(iou.type()))
+    v = _true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
+    v = _true_divide(2*torch.acos(v), np.pi).pow(2)
+    alpha = (_true_divide(v, 1-iou+v))*((iou>=0.5).type(iou.type()))
 
     ciou = diou - alpha * v
 
