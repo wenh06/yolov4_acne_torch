@@ -422,6 +422,12 @@ def init_logger(log_file=None, log_dir=None, mode='a'):
 
 DAS = True
 
+"""
+torch, torch vision, cu compatibility:
+https://download.pytorch.org/whl/torch_stable.html
+https://download.pytorch.org/whl/cu100/torch-1.3.1%2Bcu100-cp36-cp36m-linux_x86_64.whl
+"""
+
 if __name__ == "__main__":
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
