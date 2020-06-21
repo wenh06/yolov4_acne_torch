@@ -380,7 +380,7 @@ def get_args(**kwargs):
     return ED(cfg)
 
 
-def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', stdout=True):
+def init_logger(log_file=None, log_dir=None, mode='a'):
     """
     log_dir: 日志文件的文件夹路径
     mode: 'a', append; 'w', 覆盖原文件写入.
@@ -404,8 +404,8 @@ def init_logger(log_file=None, log_dir=None, log_level=logging.INFO, mode='a', s
     c_handler = logging.StreamHandler(sys.stdout)
     f_handler = logging.FileHandler(log_file)
 
-    c_handler.setLevel(log_level)
-    f_handler.setLevel(min(log_level - 10, logging.DEBUG))
+    c_handler.setLevel(logging.INFO)
+    f_handler.setLevel(logging.DEBUG)
     # 此处不能使用logging输出
     print('log file path:' + log_file)
 
@@ -429,6 +429,11 @@ if __name__ == "__main__":
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     logger.info(f'Using device {device}')
     logger.info(f'with configuration {cfg}')
+    print(f"\n{'*'*20}   Start Training   {'*'*20}\n")
+    print(f'Using device {device}')
+    print(f'with configuration {cfg}')
+
+    sys.exit(0)
 
     model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
 
