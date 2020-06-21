@@ -8,6 +8,15 @@ from torch.nn import functional as F
 from easydict import EasyDict as ED
 
 import numpy as np
+from packaging import version
+
+
+if version.parse(torch.__version__) >= version.parse('1.5.0'):
+    def _true_divide(dividend, divisor):
+        return torch.true_divide(dividend, divisor)
+else:
+    def _true_divide(dividend, divisor):
+        return dividend / divisor
 
 
 def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
