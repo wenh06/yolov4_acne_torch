@@ -61,3 +61,5 @@ Cfg.dataset_dir = '/mnt/wenhao71/data/acne_article_data/filtered_images/'
 
 # yolov4conv137weight
 Cfg.pretrained = '/mnt/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.conv.137.pth'
+
+Cfg.iou_type = 'iou'

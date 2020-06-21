@@ -25,13 +25,14 @@ from tool.utils_iou import (
 
 
 class Yolo_loss(nn.Module):
-    def __init__(self, n_classes=80, n_anchors=3, device=None, batch=2):
+    def __init__(self, n_classes=1, n_anchors=3, device=None, batch=2, iou_type='iou'):
         super(Yolo_loss, self).__init__()
         self.device = device
         self.strides = [8, 16, 32]
         image_size = 608
         self.n_classes = n_classes
         self.n_anchors = n_anchors
+        self.iou_type = iou_type
 
         self.anchors = [[12, 16], [19, 36], [40, 28], [36, 75], [76, 55], [72, 146], [142, 110], [192, 243], [459, 401]]
         self.anch_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
@@ -93,8 +94,9 @@ class Yolo_loss(nn.Module):
             anchor_ious_all = bboxes_iou(
                 truth_box.cpu(),
                 self.ref_anchors[output_id],
-                fmt='voc',
-                iou_type='iou'
+                fmt='coco',
+                # iou_type='iou',
+                iou_type=self.iou_type,
             )
             best_n_all = anchor_ious_all.argmax(dim=1)
             best_n = best_n_all % 3
@@ -109,7 +111,13 @@ class Yolo_loss(nn.Module):
             truth_box[:n, 1] = truth_y_all[b, :n]
 
             # pred_ious = bboxes_iou(pred[b].view(-1, 4), truth_box, xyxy=False)
-            pred_ious = bboxes_iou(pred[b].view(-1, 4), truth_box, fmt='coco', iou_type='iou')
+            pred_ious = bboxes_iou(
+                pred[b].view(-1, 4),
+                truth_box,
+                fmt='coco',
+                # iou_type='iou',
+                iou_type=self.iou_type,
+            )
             pred_best_iou, _ = pred_ious.max(dim=1)
             pred_best_iou = (pred_best_iou > self.ignore_thre)
             pred_best_iou = pred_best_iou.view(pred[b].shape[:3])
@@ -273,6 +281,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         n_classes=config.classes,
         device=device,
         batch=config.batch // config.subdivisions,
+        iou_type=config.iou_type,
     )
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
@@ -364,6 +373,7 @@ def get_args(**kwargs):
     # parser.add_argument('-pretrained',type=str,default=None,help='pretrained yolov4.conv.137')
     parser.add_argument('-classes',type=int,default=1,help='dataset classes')
     # parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
+    parser.add_argument('-iou-type',type=str,default='iou',help='iou type (iou, giou, diou, ciou)', dest='iou_type')
     args = vars(parser.parse_args())
 
     cfg.update(args)
