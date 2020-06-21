@@ -18,7 +18,7 @@ Cfg.hue = .1
 Cfg.learning_rate = 0.00261
 Cfg.burn_in = 1000
 Cfg.max_batches = 500500
-Cfg.steps = [600000, 800000]
+Cfg.steps = [60000, 80000]
 Cfg.policy = Cfg.steps
 Cfg.scales = .1, .1
 
@@ -35,9 +35,11 @@ Cfg.flip = 1
 Cfg.blur = 0
 Cfg.gaussian = 0
 Cfg.boxes = 200  # box num
-Cfg.TRAIN_EPOCHS = 300000
+Cfg.TRAIN_EPOCHS = 30000
 Cfg.train_label = '/mnt/wenhao71/data/acne_article_data/train.csv'
 Cfg.val_label = '/mnt/wenhao71/data/acne_article_data/val.csv'
+# Cfg.train_label = '/mnt/wenhao71/data/acne_article_data_new/train.csv'
+# Cfg.val_label = '/mnt/wenhao71/data/acne_article_data_new/val.csv'
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 original data generator accepted format:
