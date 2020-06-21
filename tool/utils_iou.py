@@ -7,6 +7,7 @@ import os, sys
 from torch.nn import functional as F
 
 import numpy as np
+from packaging import version
 
 
 __all__ = [
@@ -17,7 +18,7 @@ __all__ = [
 ]
 
 
-if torch.__version__ >= '1.15.0':
+if version.parse(torch.__version__) >= version.parse('1.5.0'):
     def _true_divide(dividend, divisor):
         return torch.true_divide(dividend, divisor)
 else:
