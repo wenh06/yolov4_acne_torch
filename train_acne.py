@@ -420,10 +420,15 @@ def init_logger(log_file=None, log_dir=None, mode='a'):
     return logger
 
 
+DAS = True
+
 if __name__ == "__main__":
     cfg = get_args(**Cfg)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if not DAS:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    else:
+        device = torch.device('cuda')
     log_dir = cfg.TRAIN_TENSORBOARD_DIR
     logger = init_logger(log_dir=log_dir)
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
@@ -433,11 +438,9 @@ if __name__ == "__main__":
     print(f'Using device {device}')
     print(f'with configuration {cfg}')
 
-    sys.exit(0)
-
     model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
 
-    if torch.cuda.device_count() > 1:
+    if not DAS and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
     model.to(device=device)
 
