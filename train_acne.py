@@ -380,7 +380,7 @@ def get_args(**kwargs):
     return ED(cfg)
 
 
-def init_logger(log_file=None, log_dir=None, mode='a'):
+def init_logger(log_file=None, log_dir=None, mode='a', verbose=0):
     """
     log_dir: 日志文件的文件夹路径
     mode: 'a', append; 'w', 覆盖原文件写入.
@@ -388,26 +388,38 @@ def init_logger(log_file=None, log_dir=None, mode='a'):
     import datetime
     def get_date_str():
         now = datetime.datetime.now()
-        return now.strftime('%Y-%m-%d_%H-%M-%S')
+        return now.strftime('%Y-%m-%d_%H-%M')
 
     # fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
     if log_dir is None:
         log_dir = '~/temp/log/'
     if log_file is None:
-        log_file = 'log_' + get_date_str() + '.txt'
+        log_file = f'log_{get_date_str()}.txt'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_file = os.path.join(log_dir, log_file)
+    print(f'log file path: {log_file}')
 
     logger = logging.getLogger('Yolov4-ACNE04')
 
     c_handler = logging.StreamHandler(sys.stdout)
     f_handler = logging.FileHandler(log_file)
 
-    c_handler.setLevel(logging.INFO)
-    f_handler.setLevel(logging.DEBUG)
-    # 此处不能使用logging输出
-    print('log file path:' + log_file)
+    if verbose >= 2:
+        print("levels of c_handler and f_handler are set DEBUG")
+        c_handler.setLevel(logging.DEBUG)
+        f_handler.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+    elif verbose >= 1:
+        print("level of c_handler is set INFO, level of f_handler is set DEBUG")
+        c_handler.setLevel(logging.INFO)
+        f_handler.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+    else:
+        print("levels of c_handler and f_handler are set WARNING")
+        c_handler.setLevel(logging.WARNING)
+        f_handler.setLevel(logging.WARNING)
+        logger.setLevel(logging.WARNING)
 
     c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
