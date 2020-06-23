@@ -451,9 +451,11 @@ if __name__ == "__main__":
     logger = init_logger(log_dir=log_dir)
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     logger.info(f'Using device {device}')
+    logger.info(f"Using torch of version {torch.__version__}")
     logger.info(f'with configuration {cfg}')
     print(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     print(f'Using device {device}')
+    print(f"Using torch of version {torch.__version__}")
     print(f'with configuration {cfg}')
 
     model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
