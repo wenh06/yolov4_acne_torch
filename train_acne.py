@@ -94,7 +94,7 @@ class Yolo_loss(nn.Module):
             anchor_ious_all = bboxes_iou(
                 truth_box.cpu(),
                 self.ref_anchors[output_id],
-                fmt='coco',
+                fmt='voc',
                 # iou_type='iou',
                 iou_type=self.iou_type,
             )
