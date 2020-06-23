@@ -322,20 +322,17 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                     writer.add_scalar('train/loss_cls', loss_cls.item(), global_step)
                     writer.add_scalar('train/loss_l2', loss_l2.item(), global_step)
                     writer.add_scalar('lr', scheduler.get_lr()[0] * config.batch, global_step)
-                    pbar.set_postfix(**{'loss (batch)': loss.item(), 'loss_xy': loss_xy.item(),
-                                        'loss_wh': loss_wh.item(),
-                                        'loss_obj': loss_obj.item(),
-                                        'loss_cls': loss_cls.item(),
-                                        'loss_l2': loss_l2.item(),
-                                        'lr': scheduler.get_lr()[0] * config.batch
-                                        })
+                    pbar.set_postfix(**{
+                        'loss (batch)': loss.item(),
+                        'loss_xy': loss_xy.item(),
+                        'loss_wh': loss_wh.item(),
+                        'loss_obj': loss_obj.item(),
+                        'loss_cls': loss_cls.item(),
+                        'loss_l2': loss_l2.item(),
+                        'lr': scheduler.get_lr()[0] * config.batch
+                    })
                     if logger:
-                        logger.debug('Train step_{}: loss : {},loss xy : {},loss wh : {},'
-                                  'loss obj : {}，loss cls : {},loss l2 : {},lr : {}'
-                                  .format(global_step, loss.item(), loss_xy.item(),
-                                          loss_wh.item(), loss_obj.item(),
-                                          loss_cls.item(), loss_l2.item(),
-                                          scheduler.get_lr()[0] * config.batch))
+                        logger.debug(f'Train step_{global_step}: loss : {loss.item()},loss xy : {loss_xy.item()}, loss wh : {loss_wh.item()}, loss obj : {loss_obj.item()}, loss cls : {loss_cls.item()}, loss l2 : {loss_l2.item()}, lr : {scheduler.get_lr()[0] * config.batch}')
 
                 pbar.update(images.shape[0])
 
@@ -348,7 +345,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
                     pass
                 torch.save(model.state_dict(), os.path.join(config.checkpoints, f'Yolov4_epoch{epoch + 1}.pth'))
                 if logger:
-                    logger.info(f'Checkpoint {epoch + 1} saved !')
+                    logger.info(f'Checkpoint {epoch + 1} saved!')
 
     writer.close()
 
@@ -358,25 +355,54 @@ def get_args(**kwargs):
     """
     pretrained_detector = '/mnt/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.pth'
     cfg = kwargs
-    parser = argparse.ArgumentParser(description='Train the Model on images and target masks',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=2,
-    #                     help='Batch size', dest='batchsize')
-    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.001,
-                        help='Learning rate', dest='learning_rate')
-    parser.add_argument('-f', '--load', dest='load', type=str, default=pretrained_detector,
-                        help='Load model from a .pth file')
-    parser.add_argument('-g', '--gpu', metavar='G', type=str, default='0',
-                        help='GPU', dest='gpu')
-    # parser.add_argument('-dir', '--data-dir', type=str, default=None,
-                        # help='dataset dir', dest='dataset_dir')
-    # parser.add_argument('-pretrained',type=str,default=None,help='pretrained yolov4.conv.137')
-    parser.add_argument('-classes',type=int,default=1,help='dataset classes')
-    # parser.add_argument('-train_label_path',dest='train_label',type=str,default='train.txt',help="train label path")
-    parser.add_argument('-iou-type',type=str,default='iou',help='iou type (iou, giou, diou, ciou)', dest='iou_type')
+    parser = argparse.ArgumentParser(
+        description='Train the Model on images and target masks',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # parser.add_argument(
+    #     '-b', '--batch-size',
+    #     metavar='B', type=int, nargs='?', default=2,
+    #     help='Batch size',
+    #     dest='batchsize')
+    parser.add_argument(
+        '-l', '--learning-rate',
+        metavar='LR', type=float, nargs='?', default=0.001,
+        help='Learning rate',
+        dest='learning_rate')
+    parser.add_argument(
+        '-f', '--load',
+        dest='load', type=str, default=pretrained_detector,
+        help='Load model from a .pth file')
+    parser.add_argument(
+        '-g', '--gpu',
+        metavar='G', type=str, default='0',
+        help='GPU',
+        dest='gpu')
+    # `dataset_dir` and `pretrained` already set in cfg_acne04.py
+    # parser.add_argument(
+    #     '-dir', '--data-dir',
+    #     type=str, default=None,
+    #     help='dataset dir', dest='dataset_dir')
+    # parser.add_argument(
+    #     '-pretrained',
+    #     type=str, default=None,
+    #     help='pretrained yolov4.conv.137')
+    parser.add_argument(
+        '-classes',
+        type=int, default=1,
+        help='dataset classes')
+    # parser.add_argument(
+    #     '-train_label_path',
+    #     dest='train_label', type=str, default='train.txt',
+    #     help="train label path")
+    parser.add_argument(
+        '-iou-type', type=str, default='iou',
+        help='iou type (iou, giou, diou, ciou)',
+        dest='iou_type')
+    
     args = vars(parser.parse_args())
 
     cfg.update(args)
+    
     return ED(cfg)
 
 
