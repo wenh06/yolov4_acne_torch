@@ -462,7 +462,10 @@ if __name__ == "__main__":
 
     if not DAS and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
-    model.to(device=device)
+    if not DAS:
+        model.to(device=device)
+    else:
+        model.cuda()
 
     try:
         train(
