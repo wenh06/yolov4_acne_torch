@@ -218,7 +218,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         shuffle=True,
         num_workers=8,
         pin_memory=True,
-        drop_last=False,
+        drop_last=True,  # setting False would result in error
         collate_fn=collate,
     )
 
@@ -228,7 +228,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
         shuffle=True,
         num_workers=8,
         pin_memory=True,
-        drop_last=False,
+        drop_last=True,  # setting False would result in error
     )
 
     writer = SummaryWriter(
