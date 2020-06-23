@@ -366,7 +366,7 @@ def get_args(**kwargs):
                         help='Learning rate', dest='learning_rate')
     parser.add_argument('-f', '--load', dest='load', type=str, default=pretrained_detector,
                         help='Load model from a .pth file')
-    parser.add_argument('-g', '--gpu', metavar='G', type=str, default='1',
+    parser.add_argument('-g', '--gpu', metavar='G', type=str, default='0',
                         help='GPU', dest='gpu')
     # parser.add_argument('-dir', '--data-dir', type=str, default=None,
                         # help='dataset dir', dest='dataset_dir')
@@ -442,7 +442,7 @@ https://download.pytorch.org/whl/cu100/torch-1.3.1%2Bcu100-cp36-cp36m-linux_x86_
 
 if __name__ == "__main__":
     cfg = get_args(**Cfg)
-    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
+    # os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     if not DAS:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else:
