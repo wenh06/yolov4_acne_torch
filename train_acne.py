@@ -2,23 +2,23 @@
 '''
 train acne detector using the enhanced ACNE04 dataset
 '''
+import logging
+import os, sys
+from collections import deque
+from tqdm import tqdm
+import argparse
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch import optim
+from torch.nn import functional as F
 from tensorboardX import SummaryWriter
-import logging
-import os, sys
-from tqdm import tqdm
+from easydict import EasyDict as ED
+
 from dataset_acne04 import ACNE04
 from cfg_acne04 import Cfg
 from models import Yolov4
-import argparse
-from easydict import EasyDict as ED
-from torch.nn import functional as F
-
-import numpy as np
-
 from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
@@ -203,7 +203,7 @@ def collate(batch):
     return images, bboxes
 
 
-def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=20, logger=None, img_scale=0.5):
+def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_step=20, logger=None, img_scale=0.5):
     """
     """
     train_dataset = ACNE04(config.train_label, config)
@@ -248,7 +248,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
             Learning rate:   {config.learning_rate}
             Training size:   {n_train}
             Validation size: {n_val}
-            Checkpoints:     {save_cp}
+            Checkpoints:     {save_ckpt}
             Device:          {device.type}
             Images size:     {config.width}
             Optimizer:       {config.TRAIN_OPTIMIZER}
@@ -286,6 +286,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
     # scheduler = ReduceLROnPlateau(optimizer, mode='max', verbose=True, patience=6, min_lr=1e-7)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, 0.001, 1e-6, 20)
 
+    save_prefix = 'Yolov4_epoch'
+    saved_models = deque()
     model.train()
     for epoch in range(epochs):
         #model.train()
@@ -336,18 +338,29 @@ def train(model, device, config, epochs=5, batch_size=1, save_cp=True, log_step=
 
                 pbar.update(images.shape[0])
 
-            if save_cp:
+            if save_ckpt:
                 try:
                     os.mkdir(config.checkpoints)
                     if logger:
                         logger.info('Created checkpoint directory')
                 except OSError:
                     pass
-                torch.save(model.state_dict(), os.path.join(config.checkpoints, f'Yolov4_epoch{epoch + 1}.pth'))
+                save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
+                torch.save(model.state_dict(), save_path)
+                saved_models.append(save_path)
+                if len(saved_models) > config.keep_checkpoint_max > 0:
+                    model_to_remove = saved_models.popleft()
+                    try:
+                        os.remove(model_to_remove)
+                    except:
+                        logger.info(f'failed to remove {model_to_remove}')
                 if logger:
                     logger.info(f'Checkpoint {epoch + 1} saved!')
 
     writer.close()
+
+
+def _remove_outdated_models()
 
 
 def get_args(**kwargs):
@@ -398,6 +411,10 @@ def get_args(**kwargs):
         '-iou-type', type=str, default='iou',
         help='iou type (iou, giou, diou, ciou)',
         dest='iou_type')
+    parser.add_argument(
+        '-keep-checkpoint-max', type=int, default=10,
+        help='maximum number of checkpoints to keep. If set 0, all checkpoint files are kept',
+        dest='keep_checkpoint_max')
     
     args = vars(parser.parse_args())
 
