@@ -25,6 +25,9 @@ from models import Yolov4
 from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
+from tool.tv_reference.utils import MetricLogger
+from tool.tv_reference.coco_utils import get_coco_api_from_dataset
+from tool.tv_reference.coco_eval import CocoEvaluator
 
 
 class Yolo_loss(nn.Module):
@@ -300,8 +303,9 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
     save_prefix = 'Yolov4_epoch'
     saved_models = deque()
     model.train()
+
     for epoch in range(epochs):
-        #model.train()
+        model.train()
         epoch_loss = 0
         epoch_step = 0
 
@@ -345,7 +349,9 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                         'lr': scheduler.get_lr()[0] * config.batch
                     })
                     if logger:
-                        logger.debug(f'Train step_{global_step}: loss : {loss.item()},loss xy : {loss_xy.item()}, loss wh : {loss_wh.item()}, loss obj : {loss_obj.item()}, loss cls : {loss_cls.item()}, loss l2 : {loss_l2.item()}, lr : {scheduler.get_lr()[0] * config.batch}')
+                        logger.info(f'Train step_{global_step}: loss : {loss.item()},loss xy : {loss_xy.item()}, loss wh : {loss_wh.item()}, loss obj : {loss_obj.item()}, loss cls : {loss_cls.item()}, loss l2 : {loss_l2.item()}, lr : {scheduler.get_lr()[0] * config.batch}')
+
+                # TODO: eval for each epoch using `evaluate`
 
                 pbar.update(images.shape[0])
 
@@ -370,6 +376,45 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                     logger.info(f'Checkpoint {epoch + 1} saved!')
 
     writer.close()
+
+
+@torch.no_grad()
+def evaluate(model, data_loader, device, logger):
+    """ not finished, not tested,
+    """
+    cpu_device = torch.device("cpu")
+    model.eval()
+    header = 'Test:'
+
+    coco = get_coco_api_from_dataset(data_loader.dataset)
+    coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
+
+    for images, targets in data_loader:
+        images = list(img.to(device) for img in images)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        torch.cuda.synchronize()
+        model_time = time.time()
+        outputs = model(images)
+
+        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        model_time = time.time() - model_time
+
+        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+        evaluator_time = time.time()
+        coco_evaluator.update(res)
+        evaluator_time = time.time() - evaluator_time
+
+    # gather the stats from all processes
+    coco_evaluator.synchronize_between_processes()
+
+    # accumulate predictions from all images
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+    
+    model.train()
+
+    return coco_evaluator
 
 
 def get_args(**kwargs):

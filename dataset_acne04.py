@@ -17,7 +17,7 @@ from dataset import image_data_augmentation, Yolo_dataset
 from cfg_acne04 import Cfg
 
 
-Cfg.dataset_dir = '/mnt/wenhao71/data/acne_article_data/filtered_images/'
+Cfg.dataset_dir = '/mnt/wenhao71/data/acne04/filtered_images/'
 
 label_map_dict = ED({
     'acne': 0,
