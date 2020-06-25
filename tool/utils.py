@@ -98,7 +98,7 @@ def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
 
 def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     import cv2
-    img = np.copy(img)
+    img_with_boxes = np.copy(img)
     colors = np.array([[1, 0, 1], [0, 0, 1], [0, 1, 1], [0, 1, 0], [1, 1, 0], [1, 0, 0]], dtype=np.float32)
 
     def get_color(c, x, max_val):
@@ -108,9 +108,12 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
         ratio = ratio - i
         r = (1 - ratio) * colors[i][c] + ratio * colors[j][c]
         return int(r * 255)
+    
+    line_size = max(1, int(max(img_with_boxes.shape[:2]) / 500))
+    font_size = line_size + 1
 
-    width = img.shape[1]
-    height = img.shape[0]
+    width = img_with_boxes.shape[1]
+    height = img_with_boxes.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
         x1 = int((box[0] - box[2] / 2.0) * width)
@@ -121,7 +124,8 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
         if color:
             rgb = color
         else:
-            rgb = (255, 0, 0)
+            # rgb = (255, 0, 0)
+            rgb = (0, 255, 0)
         if len(box) >= 7 and class_names:
             cls_conf = box[5]
             cls_id = box[6]
@@ -133,12 +137,12 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
             blue = get_color(0, offset, classes)
             if color is None:
                 rgb = (red, green, blue)
-            img = cv2.putText(img, class_names[cls_id], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1.2, rgb, 1)
-        img = cv2.rectangle(img, (x1, y1), (x2, y2), rgb, 1)
+            img_with_boxes = cv2.putText(img_with_boxes, class_names[cls_id], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1.2, rgb, font_size)
+        img_with_boxes = cv2.rectangle(img_with_boxes, (x1, y1), (x2, y2), rgb, line_size)
     if savename:
         print("save plot results to %s" % savename)
-        cv2.imwrite(savename, img)
-    return img
+        cv2.imwrite(savename, img_with_boxes)
+    return img_with_boxes
 
 
 def read_truths(lab_path):

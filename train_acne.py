@@ -348,6 +348,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                 save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
                 torch.save(model.state_dict(), save_path)
                 saved_models.append(save_path)
+                # remove outdated models
                 if len(saved_models) > config.keep_checkpoint_max > 0:
                     model_to_remove = saved_models.popleft()
                     try:
@@ -358,9 +359,6 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                     logger.info(f'Checkpoint {epoch + 1} saved!')
 
     writer.close()
-
-
-def _remove_outdated_models()
 
 
 def get_args(**kwargs):
@@ -472,6 +470,12 @@ def init_logger(log_file=None, log_dir=None, mode='a', verbose=0):
     return logger
 
 
+def _get_date_str():
+    import datetime
+    now = datetime.datetime.now()
+    return now.strftime('%Y-%m-%d_%H-%M')
+
+
 DAS = True
 
 """
@@ -513,6 +517,7 @@ if __name__ == "__main__":
             config=cfg,
             epochs=cfg.TRAIN_EPOCHS,
             device=device,
+            logger=logger,
         )
     except KeyboardInterrupt:
         torch.save(model.state_dict(), os.path.join(cfg.checkpoints, 'INTERRUPTED.pth'))
