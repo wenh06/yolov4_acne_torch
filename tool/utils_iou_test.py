@@ -27,14 +27,18 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     if 'plt' not in dir():
         import matplotlib.pyplot as plt
     if 'cv2' not in dir():
-        import cv2
+        try:
+            import cv2
+        except ModuleNotFoundError:
+            cv2 = None
+            from PIL import Image, ImageDraw
     
     assert iou_type.lower() in ['iou', 'giou', 'diou', 'ciou']
 
     if isinstance(bboxes_a, np.ndarray):
         bboxes_a = torch.Tensor(bboxes_a)
     if isinstance(bboxes_b, np.ndarray):
-        bboxes_b = torch.Tensor(bboxes_a)
+        bboxes_b = torch.Tensor(bboxes_b)
     
     if bboxes_a.shape[1] != 4 or bboxes_b.shape[1] != 4:
         raise IndexError
@@ -48,8 +52,8 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
         # bottom right
         br_intersect = torch.min(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
-        bb_a = bboxes_a[:, 2:] - bboxes_a[:, :2]
-        bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]
+        bb_a = bboxes_a[:, 2:] - bboxes_a[:, :2]  # w, h
+        bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]  # w, h
     elif fmt.lower() == 'coco':  # xmin, ymin, w, h
         tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
@@ -120,7 +124,9 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     # bb_a of shape `(N,2)`, bb_b of shape `(K,2)`
     v = torch.einsum('nm,km->nk', bb_a, bb_b)
     v = _true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
-    v = _true_divide(2*torch.acos(v), np.pi).pow(2)
+    eps = 1e-7
+    v = torch.clamp(v, -1+eps, 1-eps)
+    v = (_true_divide(2*torch.acos(v), np.pi)).pow(2)
     alpha = (_true_divide(v, 1-iou+v))*((iou>=0.5).type(iou.type()))
 
     ciou = diou - alpha * v
@@ -147,6 +153,13 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         print(f"diag_len = {diag_len}")
 
         print("for computing ciou")
+        inner_product = torch.einsum('nm,km->nk', bb_a, bb_b)
+        product_of_lengths = torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)
+        print(f"inner product of bb_a and bb_b is {inner_product}")
+        print(f"product of lengths of bb_a and bb_b is {product_of_lengths}")
+        print(f"inner product divided by product of lengths equals {_true_divide(inner_product, product_of_lengths)}")
+        print(f"normalized angle distance = {v}")
+        print(f"alpha = {alpha}")
         print(f"v = {v}")
         print(f"alpha = {alpha}")
 
@@ -175,9 +188,21 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         img_with_boxes = plane.copy()
 
         line_size = 1
-        cv2.rectangle(img_with_boxes, (ba.xmin, ba.ymin), (ba.xmax, ba.ymax), (0, 255, 0), line_size)
-        cv2.rectangle(img_with_boxes, (bb.xmin, bb.ymin), (bb.xmax, bb.ymax), (0, 0, 255), line_size)
-        cv2.rectangle(img_with_boxes, (bc.xmin, bc.ymin), (bc.xmax, bc.ymax), (255, 0, 0), line_size)
+        if cv2:
+            cv2.rectangle(img_with_boxes, (ba.xmin, ba.ymin), (ba.xmax, ba.ymax), (0, 255, 0), line_size)
+            cv2.rectangle(img_with_boxes, (bb.xmin, bb.ymin), (bb.xmax, bb.ymax), (0, 0, 255), line_size)
+            cv2.rectangle(img_with_boxes, (max(0,bc.ymin-1), max(0,bc.ymin-1)), (bc.xmax, bc.ymax), (255, 0, 0), line_size)
+        else:
+            img_with_boxes = Image.fromarray(img_with_boxes)
+            drawer = ImageDraw.Draw(img_with_boxes)
+            # drawer.line([(ba.xmin, ba.ymin), (ba.xmin, ba.ymax), (ba.xmax, ba.ymax), (ba.xmax, ba.ymin), (ba.xmin, ba.ymin)], fill='green', width=line_size)
+            # drawer.line([(bb.xmin, bb.ymin), (bb.xmin, bb.ymax), (bb.xmax, bb.ymax), (bb.xmax, bb.ymin), (bb.xmin, bb.ymin)], fill='blue', width=line_size)
+            # drawer.line([((max(0,bc.xmin-1), max(0,bc.ymin-1)), ((max(0,bc.xmin-1), bc.ymax), (bc.xmax, bc.ymax), (bc.xmax, max(0,bc.ymin-1)), ((max(0,bc.xmin-1), max(0,bc.ymin-1))], fill='red', width=line_size)
+            drawer.rectangle([(ba.xmin, ba.ymin), (ba.xmax, ba.ymax)], outline='green', width=line_size)
+            drawer.rectangle([(bb.xmin, bb.ymin), (bb.xmax, bb.ymax)], outline='blue', width=line_size)
+            drawer.rectangle([(max(0,bc.xmin-1), max(0,bc.ymin-1)), (bc.xmax+1, bc.ymax+1)], outline='red', width=line_size)
+            img_with_boxes = np.array(img_with_boxes)
+            del drawer
 
         plt.figure(figsize=(7,7))
         plt.imshow(img_with_boxes)

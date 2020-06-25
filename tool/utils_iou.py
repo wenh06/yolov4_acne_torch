@@ -59,6 +59,7 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         br_intersect = torch.min(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
         bb_a = bboxes_a[:, 2:] - bboxes_a[:, :2]
         bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]
+        # bb_* can also be seen vectors representing box_width, box_height
     elif fmt.lower() == 'coco':  # xmin, ymin, w, h
         tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
@@ -125,7 +126,11 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     # bb_a of shape `(N,2)`, bb_b of shape `(K,2)`
     v = torch.einsum('nm,km->nk', bb_a, bb_b)
     v = _true_divide(v, (torch.norm(bb_a, p='fro', dim=1)[:,np.newaxis] * torch.norm(bb_b, p='fro', dim=1)))
-    v = _true_divide(2*torch.acos(v), np.pi).pow(2)
+    # avoid nan for torch.acos near \pm 1
+    # https://github.com/pytorch/pytorch/issues/8069
+    eps = 1e-7
+    v = torch.clamp(v, -1+eps, 1-eps)
+    v = (_true_divide(2*torch.acos(v), np.pi)).pow(2)
     alpha = (_true_divide(v, 1-iou+v))*((iou>=0.5).type(iou.type()))
 
     ciou = diou - alpha * v
