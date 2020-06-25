@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 train acne detector using the enhanced ACNE04 dataset
+
+More reference:
+[1] https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 '''
 import logging
 import os, sys
@@ -269,12 +272,20 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
             factor = 0.01
         return factor
 
-    optimizer = optim.Adam(
-        params=model.parameters(),
-        lr=config.learning_rate / config.batch,
-        betas=(0.9, 0.999),
-        eps=1e-08,
-    )
+    if config.TRAIN_OPTIMIZER.lower() == 'adam':
+        optimizer = optim.Adam(
+            params=model.parameters(),
+            lr=config.learning_rate / config.batch,
+            betas=(0.9, 0.999),
+            eps=1e-08,
+        )
+    elif config.TRAIN_OPTIMIZER.lower() == 'sgd':
+        optimizer = optim.SGD(
+            params=model.parameters(),
+            lr=config.learning_rate / config.batch,
+            momentum=0.9,
+            weight_decay=0.0005,
+        )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
 
     criterion = Yolo_loss(
@@ -413,6 +424,10 @@ def get_args(**kwargs):
         '-keep-checkpoint-max', type=int, default=10,
         help='maximum number of checkpoints to keep. If set 0, all checkpoint files are kept',
         dest='keep_checkpoint_max')
+    parser.add_argument(
+        '-optimizer', type='str', default='adam',
+        help='training optimizer',
+        dest='TRAIN_OPTIMIZER')
     
     args = vars(parser.parse_args())
 

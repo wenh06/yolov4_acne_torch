@@ -1,6 +1,7 @@
 numpy==1.18.2
 torch==1.4.0
 tensorboardX==2.0
+torchvision
 matplotlib
 tqdm
 easydict

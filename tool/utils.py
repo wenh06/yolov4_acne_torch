@@ -95,6 +95,7 @@ def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
     return np.array(keep)
 
 
+_CV2_GREEN = (0, 255, 0)
 
 def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     import cv2
@@ -125,7 +126,7 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
             rgb = color
         else:
             # rgb = (255, 0, 0)
-            rgb = (0, 255, 0)
+            rgb = _CV2_GREEN
         if len(box) >= 7 and class_names:
             cls_conf = box[5]
             cls_id = box[6]
@@ -135,7 +136,7 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
             red = get_color(2, offset, classes)
             green = get_color(1, offset, classes)
             blue = get_color(0, offset, classes)
-            if color is None:
+            if color is None and len(class_names) > 1:
                 rgb = (red, green, blue)
             img_with_boxes = cv2.putText(img_with_boxes, class_names[cls_id], (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1.2, rgb, font_size)
         img_with_boxes = cv2.rectangle(img_with_boxes, (x1, y1), (x2, y2), rgb, line_size)
