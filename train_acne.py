@@ -286,8 +286,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
         optimizer = optim.SGD(
             params=model.parameters(),
             lr=config.learning_rate / config.batch,
-            momentum=0.9,
-            weight_decay=0.0005,
+            momentum=config.momentum,
+            weight_decay=config.decay,
         )
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, burnin_schedule)
 

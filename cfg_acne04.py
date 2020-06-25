@@ -38,8 +38,8 @@ Cfg.boxes = 200  # box num
 Cfg.TRAIN_EPOCHS = 450
 Cfg.train_label = '/mnt/wenhao71/data/acne04/train.csv'
 Cfg.val_label = '/mnt/wenhao71/data/acne04/val.csv'
-# Cfg.train_label = '/mnt/wenhao71/data/acne_article_data_new/train.csv'
-# Cfg.val_label = '/mnt/wenhao71/data/acne_article_data_new/val.csv'
+# Cfg.train_label = '/mnt/wenhao71/data/acne04_new/train.csv'
+# Cfg.val_label = '/mnt/wenhao71/data/acne04_new/val.csv'
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 original data generator accepted format:
