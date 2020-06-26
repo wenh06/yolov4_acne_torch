@@ -212,8 +212,8 @@ def collate(batch):
 def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_step=20, logger=None, img_scale=0.5):
     """
     """
-    train_dataset = ACNE04(config.train_label, config)
-    val_dataset = ACNE04(config.val_label, config)
+    train_dataset = ACNE04(label_path=config.train_label, cfg=config, train=True)
+    val_dataset = ACNE04(label_path=config.val_label, cfg=config, train=False)
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)

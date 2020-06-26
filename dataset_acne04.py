@@ -1,6 +1,7 @@
 """
 
 """
+import torch
 from torch.utils.data.dataset import Dataset
 
 import random
@@ -27,7 +28,7 @@ label_map_dict = ED({
 class ACNE04(Yolo_dataset):
     """
     """
-    def __init__(self, lable_path, cfg):
+    def __init__(self, lable_path, cfg, train):
         """
         unlike in Yolo_dataset where the labels are stored in a txt file,
         with each line cls,x_center,y_center,w,h,
@@ -39,6 +40,7 @@ class ACNE04(Yolo_dataset):
             raise ValueError("Combination: letter_box=1 & mosaic=1 - isn't supported, use only 1 of these parameters")
 
         self.cfg = cfg
+        self.train = train
 
         df_ann = pd.read_csv(lable_path)
         df_ann = df_ann[df_ann['class'].isin(label_map_dict.keys())].reset_index(drop=True)
@@ -75,7 +77,21 @@ class ACNE04(Yolo_dataset):
             return super().__len__()
 
         def __getitem__(self, index):
-            return super().__getitem__(index)
+            if self.train:
+                return super().__getitem__(index)
+            else:
+                img_path = self.imgs[index]
+                bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
+                img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                num_objs = len(bboxes)
+                target = {}
+                target['boxes'] = torch.as_tensor(bboxes[...,:4], dtype=torch.float32)
+                target['labels'] = torch.as_tensor(bboxes[...,-1].flatten(), dtype=torch.int64)
+                target['image_id'] = torch.tensor([get_image_id(img_path)])
+                target['area'] = (target['boxes'][:,3]-target['boxes'][:,1])*(target['boxes'][:,2]-target['boxes'][:,0])
+                target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
+                return img, target
 
 
 def train_val_test_split(df:pd.DataFrame, train_ratio:Union[int,float]=70, val_ratio:Union[int,float]=15, test_ratio:Union[int,float]=15) -> Tuple[pd.DataFrame,pd.DataFrame,pd.DataFrame]:
@@ -113,3 +129,11 @@ def train_val_test_split(df:pd.DataFrame, train_ratio:Union[int,float]=70, val_r
     df_test = df[df['filename'].isin(test)].reset_index(drop=True)
 
     return df_train, df_val, df_test
+
+
+def get_image_id(filename:str) -> int:
+    """Convert a string to a integer."""
+    lv, no = os.path.splitext(os.path.basename(filename))[0].split("_")
+    lv = lv.replace("levle", "")
+    no = f"{int(no):04d}"
+    return int(lv+no)

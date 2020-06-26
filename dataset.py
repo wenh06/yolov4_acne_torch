@@ -265,14 +265,14 @@ class Yolo_dataset(Dataset):
             truth[data[0]] = []
             for i in data[1:]:
                 truth[data[0]].append([int(j) for j in i.split(',')])
-
         self.truth = truth
+        self.imgs = list(self.truth.keys())
 
     def __len__(self):
         return len(self.truth.keys())
 
     def __getitem__(self, index):
-        img_path = list(self.truth.keys())[index]
+        img_path = self.imgs[index]
         bboxes = np.array(self.truth.get(img_path), dtype=np.float)
         img_path = os.path.join(self.cfg.dataset_dir, img_path)
         use_mixup = self.cfg.mixup
