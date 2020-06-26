@@ -352,6 +352,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                         logger.info(f'Train step_{global_step}: loss : {loss.item()},loss xy : {loss_xy.item()}, loss wh : {loss_wh.item()}, loss obj : {loss_obj.item()}, loss cls : {loss_cls.item()}, loss l2 : {loss_l2.item()}, lr : {scheduler.get_lr()[0] * config.batch}')
 
                 # TODO: eval for each epoch using `evaluate`
+                # evaluate(model, val_loader, device, logger)
+                # model.train()
 
                 pbar.update(images.shape[0])
 
@@ -411,8 +413,6 @@ def evaluate(model, data_loader, device, logger):
     # accumulate predictions from all images
     coco_evaluator.accumulate()
     coco_evaluator.summarize()
-    
-    model.train()
 
     return coco_evaluator
 
