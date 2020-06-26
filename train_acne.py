@@ -5,6 +5,7 @@ train acne detector using the enhanced ACNE04 dataset
 More reference:
 [1] https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 '''
+import time
 import logging
 import os, sys
 from collections import deque
@@ -25,9 +26,14 @@ from models import Yolov4
 from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
+from tool.utils import post_processing
 from tool.tv_reference.utils import MetricLogger
+from tool.tv_reference.utils import collate_fn as val_collate
 from tool.tv_reference.coco_utils import get_coco_api_from_dataset
 from tool.tv_reference.coco_eval import CocoEvaluator
+
+
+DAS = True
 
 
 class Yolo_loss(nn.Module):
@@ -235,6 +241,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
         num_workers=8,
         pin_memory=True,
         drop_last=True,  # setting False would result in error
+        collate_fn=val_collate,
     )
 
     writer = SummaryWriter(
@@ -391,15 +398,19 @@ def evaluate(model, data_loader, device, logger):
     coco = get_coco_api_from_dataset(data_loader.dataset)
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
-    for images, targets in data_loader:
-        images = list(img.to(device) for img in images)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+    for batch in data_loader:
+        images = [[img] for img in batch[0]]
+        images = np.concatenate(images, axis=0)
+        images = images.transpose(0, 3, 1, 2)
+        images = torch.from_numpy(images).div(255.0)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in batch[1]]
 
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         model_time = time.time()
         outputs = model(images)
 
-        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
 
         res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
@@ -535,8 +546,6 @@ def _get_date_str():
     now = datetime.datetime.now()
     return now.strftime('%Y-%m-%d_%H-%M')
 
-
-DAS = True
 
 """
 torch, torch vision, cu compatibility:

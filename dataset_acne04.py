@@ -28,7 +28,7 @@ label_map_dict = ED({
 class ACNE04(Yolo_dataset):
     """
     """
-    def __init__(self, lable_path, cfg, train):
+    def __init__(self, label_path, cfg, train):
         """
         unlike in Yolo_dataset where the labels are stored in a txt file,
         with each line cls,x_center,y_center,w,h,
@@ -42,7 +42,7 @@ class ACNE04(Yolo_dataset):
         self.cfg = cfg
         self.train = train
 
-        df_ann = pd.read_csv(lable_path)
+        df_ann = pd.read_csv(label_path)
         df_ann = df_ann[df_ann['class'].isin(label_map_dict.keys())].reset_index(drop=True)
 
         # NOTE that the annotations used in this project are NOT in Yolo format, but in VOC format
@@ -64,7 +64,7 @@ class ACNE04(Yolo_dataset):
         # for _, row in df_ann.iterrows():
         #     truth[row['filename']].append(row[['xmin', 'ymin', 'xmax', 'ymax', 'class_index']].tolist())
 
-        # f = open(lable_path, 'r', encoding='utf-8')
+        # f = open(label_path, 'r', encoding='utf-8')
         # for line in f.readlines():
         #     data = line.split(" ")
         #     truth[data[0]] = []
@@ -72,26 +72,31 @@ class ACNE04(Yolo_dataset):
         #         truth[data[0]].append([int(j) for j in i.split(',')])
 
         self.truth = truth
+        self.imgs = list(self.truth.keys())
 
-        def __len__(self):
-            return super().__len__()
+    def __len__(self):
+        return super().__len__()
 
-        def __getitem__(self, index):
-            if self.train:
-                return super().__getitem__(index)
-            else:
-                img_path = self.imgs[index]
-                bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
-                img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                num_objs = len(bboxes)
-                target = {}
-                target['boxes'] = torch.as_tensor(bboxes[...,:4], dtype=torch.float32)
-                target['labels'] = torch.as_tensor(bboxes[...,-1].flatten(), dtype=torch.int64)
-                target['image_id'] = torch.tensor([get_image_id(img_path)])
-                target['area'] = (target['boxes'][:,3]-target['boxes'][:,1])*(target['boxes'][:,2]-target['boxes'][:,0])
-                target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
-                return img, target
+    def __getitem__(self, index):
+        if self.train:
+            return super().__getitem__(index)
+        else:
+            return self._get_val_item(index)
+
+    def _get_val_item(self, index):
+        img_path = self.imgs[index]
+        bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
+        img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (self.cfg.w, self.cfg.h))
+        num_objs = len(bboxes_with_cls_id)
+        target = {}
+        target['boxes'] = torch.as_tensor(bboxes_with_cls_id[...,:4], dtype=torch.float32)
+        target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
+        target['image_id'] = torch.tensor([get_image_id(img_path)])
+        target['area'] = (target['boxes'][:,3]-target['boxes'][:,1])*(target['boxes'][:,2]-target['boxes'][:,0])
+        target['iscrowd'] = torch.zeros((num_objs,), dtype=torch.int64)
+        return img, target
 
 
 def train_val_test_split(df:pd.DataFrame, train_ratio:Union[int,float]=70, val_ratio:Union[int,float]=15, test_ratio:Union[int,float]=15) -> Tuple[pd.DataFrame,pd.DataFrame,pd.DataFrame]:

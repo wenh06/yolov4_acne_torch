@@ -23,23 +23,32 @@ About Darknet framework: http://pjreddie.com/darknet/
 * [Yolo v4 in other frameworks (TensorRT, TensorFlow, PyTorch, OpenVINO, OpenCV-dnn, TVM,...)](#yolo-v4-in-other-frameworks)
 * [Datasets](#datasets)
 
-0.  [Improvements in this repository](#improvements-in-this-repository)
-1.  [How to use](#how-to-use-on-the-command-line)
-2.  How to compile on Linux
-    * [Using cmake](#how-to-compile-on-linux-using-cmake)
-    * [Using make](#how-to-compile-on-linux-using-make)
-3.  How to compile on Windows
-    * [Using CMake-GUI](#how-to-compile-on-windows-using-cmake)
-    * [Using vcpkg](#how-to-compile-on-windows-using-vcpkg)
-    * [Legacy way](#how-to-compile-on-windows-legacy-way)
-4.  [Training and Evaluation of speed and accuracy on MS COCO](https://github.com/AlexeyAB/darknet/wiki#training-and-evaluation-of-speed-and-accuracy-on-ms-coco)
-5.  [How to train with multi-GPU:](#how-to-train-with-multi-gpu)
-6.  [How to train (to detect your custom objects)](#how-to-train-to-detect-your-custom-objects)
-7.  [How to train tiny-yolo (to detect your custom objects)](#how-to-train-tiny-yolo-to-detect-your-custom-objects)
-8.  [When should I stop training](#when-should-i-stop-training)
-9.  [How to improve object detection](#how-to-improve-object-detection)
-10.  [How to mark bounded boxes of objects and create annotation files](#how-to-mark-bounded-boxes-of-objects-and-create-annotation-files)
-11. [How to use Yolo as DLL and SO libraries](#how-to-use-yolo-as-dll-and-so-libraries)
+- [Yolo-v4 and Yolo-v3/v2 for Windows and Linux](#yolo-v4-and-yolo-v3v2-for-windows-and-linux)
+    - [(neural network for object detection) - Tensor Cores can be used on Linux and [Windows](https://github.com/AlexeyAB/darknet#how-to-compile-on-windows-using-cmake-gui)](#neural-network-for-object-detection---tensor-cores-can-be-used-on-linux-and-windows)
+      - [Youtube video of results](#youtube-video-of-results)
+      - [How to evaluate AP of YOLOv4 on the MS COCO evaluation server](#how-to-evaluate-ap-of-yolov4-on-the-ms-coco-evaluation-server)
+      - [How to evaluate FPS of YOLOv4 on GPU](#how-to-evaluate-fps-of-yolov4-on-gpu)
+      - [Pre-trained models](#pre-trained-models)
+    - [Requirements](#requirements)
+      - [Yolo v4 in other frameworks](#yolo-v4-in-other-frameworks)
+      - [Datasets](#datasets)
+    - [Improvements in this repository](#improvements-in-this-repository)
+      - [How to use on the command line](#how-to-use-on-the-command-line)
+        - [For using network video-camera mjpeg-stream with any Android smartphone](#for-using-network-video-camera-mjpeg-stream-with-any-android-smartphone)
+    - [How to compile on Linux (using `cmake`)](#how-to-compile-on-linux-using-cmake)
+    - [How to compile on Linux (using `make`)](#how-to-compile-on-linux-using-make)
+    - [How to compile on Windows (using `CMake`)](#how-to-compile-on-windows-using-cmake)
+    - [How to compile on Windows (using `vcpkg`)](#how-to-compile-on-windows-using-vcpkg)
+    - [How to compile on Windows (legacy way)](#how-to-compile-on-windows-legacy-way)
+    - [How to compile (custom):](#how-to-compile-custom)
+  - [How to train with multi-GPU:](#how-to-train-with-multi-gpu)
+  - [How to train (to detect your custom objects):](#how-to-train-to-detect-your-custom-objects)
+    - [How to train tiny-yolo (to detect your custom objects):](#how-to-train-tiny-yolo-to-detect-your-custom-objects)
+  - [When should I stop training:](#when-should-i-stop-training)
+    - [Custom object detection:](#custom-object-detection)
+  - [How to improve object detection:](#how-to-improve-object-detection)
+  - [How to mark bounded boxes of objects and create annotation files:](#how-to-mark-bounded-boxes-of-objects-and-create-annotation-files)
+  - [How to use Yolo as DLL and SO libraries](#how-to-use-yolo-as-dll-and-so-libraries)
 
 
 
@@ -240,7 +249,7 @@ On Linux find executable file `./darknet` in the root directory, while on Window
     `darknet.exe detector test cfg/coco.data cfg/yolov4.cfg yolov4.weights -ext_output -dont_show -out result.json < data/train.txt`
 * To process a list of images `data/train.txt` and save results of detection to `result.txt` use:                             
     `darknet.exe detector test cfg/coco.data cfg/yolov4.cfg yolov4.weights -dont_show -ext_output < data/train.txt > result.txt`
-* Pseudo-lableing - to process a list of images `data/new_train.txt` and save results of detection in Yolo training format for each image as label `<image_name>.txt` (in this way you can increase the amount of training data) use:
+* Pseudo-labeling - to process a list of images `data/new_train.txt` and save results of detection in Yolo training format for each image as label `<image_name>.txt` (in this way you can increase the amount of training data) use:
     `darknet.exe detector test cfg/coco.data cfg/yolov4.cfg yolov4.weights -thresh 0.25 -dont_show -save_labels < data/new_train.txt`
 * To calculate anchors: `darknet.exe detector calc_anchors data/obj.data -num_of_clusters 9 -width 416 -height 416`
 * To check accuracy mAP@IoU=50: `darknet.exe detector map data/obj.data yolo-obj.cfg backup\yolo-obj_7000.weights`
