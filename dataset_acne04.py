@@ -93,7 +93,13 @@ class ACNE04(Yolo_dataset):
         # img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         num_objs = len(bboxes_with_cls_id)
         target = {}
-        target['boxes'] = torch.as_tensor(bboxes_with_cls_id[...,:4], dtype=torch.float32)
+        # boxes should be in coco format
+        boxes = bboxes_with_cls_id[...,:4]
+        boxes[...,2] = (boxes[...,2] - boxes[...,0]) / self.cfg.w
+        boxes[...,3] = (boxes[...,3] - boxes[...,1]) / self.cfg.h
+        boxes[...,0] = boxes[...,0] / self.cfg.w
+        boxes[...,1] = boxes[...,1] / self.cfg.h
+        target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
         target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
         target['image_id'] = torch.tensor([get_image_id(img_path)])
         target['area'] = (target['boxes'][:,3]-target['boxes'][:,1])*(target['boxes'][:,2]-target['boxes'][:,0])
