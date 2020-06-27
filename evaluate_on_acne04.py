@@ -210,7 +210,9 @@ def evaluate_all(device=None):
             outputs = outputs.cpu().detach().numpy()
             res = {}
             for target, output in zip(targets, outputs):
-                boxes = torch.as_tensor(output[...,:4], dtype=torch.float32)
+                boxes = output[...,:4]  # output boxes in yolo format
+                boxes[...,:2] = boxes[...,:2] - boxes[...,2:]/2  # to coco format
+                boxes = torch.as_tensor(boxes, dtype=torch.float32)
                 labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
                 scores = torch.as_tensor(output[...,-1], dtype=torch.float32)
                 res[target["image_id"].item()] = {
