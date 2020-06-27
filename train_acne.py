@@ -9,6 +9,8 @@ import time
 import logging
 import os, sys
 from collections import deque
+
+import cv2
 from tqdm import tqdm
 import argparse
 import numpy as np
@@ -388,7 +390,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, device, logger):
+def evaluate(model, data_loader, cfg, device, logger):
     """ finished, has bugs
     """
     cpu_device = torch.device("cpu")
@@ -399,25 +401,30 @@ def evaluate(model, data_loader, device, logger):
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
     for images, targets in data_loader:
-        images = [[img] for img in images]
-        images = np.concatenate(images, axis=0)
-        images = images.transpose(0, 3, 1, 2)
-        images = torch.from_numpy(images).div(255.0)
+        model_input = [[cv2.resize(img, (cfg.w, cfg.h))] for img in images]
+        model_input = np.concatenate(model_input, axis=0)
+        model_input = model_input.transpose(0, 3, 1, 2)
+        model_input = torch.from_numpy(model_input).div(255.0)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         model_time = time.time()
-        outputs = model(images)
+        outputs = model(model_input)
 
         # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
 
         outputs = outputs.cpu().detach().numpy()
         res = {}
-        for target, output in zip(targets, outputs):
+        for img, target, output in zip(images, targets, outputs):
+            img_height, img_width = img.shape[:2]
             boxes = output[...,:4]  # output boxes in yolo format
             boxes[...,:2] = boxes[...,:2] - boxes[...,2:]/2  # to coco format
+            boxes[...,0] = boxes[...,0]*img_width
+            boxes[...,1] = boxes[...,1]*img_height
+            boxes[...,2] = boxes[...,2]*img_width
+            boxes[...,3] = boxes[...,3]*img_height
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
             labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
             scores = torch.as_tensor(output[...,-1], dtype=torch.float32)

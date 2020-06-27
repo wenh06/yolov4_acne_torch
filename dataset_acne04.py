@@ -88,18 +88,15 @@ class ACNE04(Yolo_dataset):
         img_path = self.imgs[index]
         bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
         img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
-        img_height, img_width = img.shape[:2]
+        # img_height, img_width = img.shape[:2]
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, (self.cfg.w, self.cfg.h))
+        # img = cv2.resize(img, (self.cfg.w, self.cfg.h))
         # img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         num_objs = len(bboxes_with_cls_id)
         target = {}
         # boxes should be in coco format
         boxes = bboxes_with_cls_id[...,:4]
-        boxes[...,2] = (boxes[...,2] - boxes[...,0]) / img_width  # box width
-        boxes[...,3] = (boxes[...,3] - boxes[...,1]) / img_height  # box height
-        boxes[...,0] = boxes[...,0] / img_width
-        boxes[...,1] = boxes[...,1] / img_height
+        boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
         target['labels'] = torch.as_tensor(bboxes_with_cls_id[...,-1].flatten(), dtype=torch.int64)
         target['image_id'] = torch.tensor([get_image_id(img_path)])
