@@ -6,8 +6,9 @@ import time
 import glob
 from random import shuffle
 from numbers import Real
-import matplotlib.pyplot as plt
 
+import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 import cv2
@@ -184,13 +185,14 @@ def evaluate_all(device=None):
     all_models = glob.glob(os.path.join(Cfg.checkpoints, "*.pth"))
     all_models.sort(key = lambda fp: int(os.path.splitext(os.path.basename(fp))[0].replace("Yolov4_epoch", "")))
 
-    for p in all_models:
+    for model_path in all_models:
+        print(f"eval on {os.path.splitext(os.path.basename(fp))[0]}")
         model = Yolov4(None,1,True)
         model.load_state_dict(torch.load(model_path,map_location=device))
         model.eval()
         coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
-        for images, targets in data_loader:
+        for images, targets in val_loader:
             images = [[img] for img in images]
             images = np.concatenate(images, axis=0)
             images = images.transpose(0, 3, 1, 2)

@@ -126,7 +126,7 @@ class Yolo_loss(nn.Module):
             pred_ious = bboxes_iou(
                 pred[b].view(-1, 4),
                 truth_box,
-                fmt='coco',
+                fmt='yolo',
                 # iou_type='iou',
                 iou_type=self.iou_type,
             )
@@ -416,6 +416,8 @@ def evaluate(model, data_loader, device, logger):
         outputs = outputs.cpu().detach().numpy()
         res = {}
         for target, output in zip(targets, outputs):
+            boxes = output[...,:4]  # output boxes in yolo format
+            new_boxes[...,:2] = boxes[...,:2] - boxes[...,2:]/2  # to coco format
             boxes = torch.as_tensor(output[...,:4], dtype=torch.float32)
             labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
             scores = torch.as_tensor(output[...,-1], dtype=torch.float32)

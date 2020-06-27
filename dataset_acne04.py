@@ -96,8 +96,8 @@ class ACNE04(Yolo_dataset):
         target = {}
         # boxes should be in coco format
         boxes = bboxes_with_cls_id[...,:4]
-        boxes[...,2] = (boxes[...,2] - boxes[...,0]) / img_width
-        boxes[...,3] = (boxes[...,3] - boxes[...,1]) / img_height
+        boxes[...,2] = (boxes[...,2] - boxes[...,0]) / img_width  # box width
+        boxes[...,3] = (boxes[...,3] - boxes[...,1]) / img_height  # box height
         boxes[...,0] = boxes[...,0] / img_width
         boxes[...,1] = boxes[...,1] / img_height
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
