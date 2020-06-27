@@ -87,9 +87,10 @@ class ACNE04(Yolo_dataset):
     def _get_val_item(self, index):
         img_path = self.imgs[index]
         bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
-        img = Image.open(os.path.join(self.cfg.dataset_dir, img_path)).convert("RGB")
-        img = img.resize((self.cfg.width, self.cfg.height))
-        img = F.to_tensor(img)
+        img = cv2.imread(os.path.join(self.cfg.dataset_dir, img_path))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (self.cfg.w, self.cfg.h))
+        # img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         num_objs = len(bboxes_with_cls_id)
         target = {}
         target['boxes'] = torch.as_tensor(bboxes_with_cls_id[...,:4], dtype=torch.float32)

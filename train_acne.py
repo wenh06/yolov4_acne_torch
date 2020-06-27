@@ -398,12 +398,12 @@ def evaluate(model, data_loader, device, logger):
     coco = get_coco_api_from_dataset(data_loader.dataset)
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
-    for batch in data_loader:
-        images = [[img] for img in batch[0]]
+    for images, targets in data_loader:
+        images = [[img] for img in images]
         images = np.concatenate(images, axis=0)
         images = images.transpose(0, 3, 1, 2)
         images = torch.from_numpy(images).div(255.0)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in batch[1]]
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
