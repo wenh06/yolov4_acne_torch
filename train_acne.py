@@ -413,7 +413,18 @@ def evaluate(model, data_loader, device, logger):
         # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
 
-        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+        outputs = outputs.cpu().detach().numpy()
+        res = {}
+        for target, output in zip(targets, outputs):
+            boxes = torch.as_tensor(output[...,:4], dtype=torch.float32)
+            labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
+            scores = torch.as_tensor(output[...,-1], dtype=torch.float32)
+            res[target["image_id"].item()] = {
+                "boxes": boxes,
+                "scores": scores,
+                "labels": labels,
+            }
+        
         evaluator_time = time.time()
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
