@@ -1,18 +1,19 @@
 """
 
 """
-import torch
-from torch.utils.data.dataset import Dataset
-
 import random
-import cv2
 import sys
-import numpy as np
-import pandas as pd
 import os
 from typing import Union, Tuple
+
+import cv2
+import numpy as np
+import pandas as pd
 from PIL import Image
 from easydict import EasyDict as ED
+import torch
+from torchvision.transforms import functional as F
+from torch.utils.data.dataset import Dataset
 
 from dataset import image_data_augmentation, Yolo_dataset
 from cfg_acne04 import Cfg
@@ -88,6 +89,7 @@ class ACNE04(Yolo_dataset):
         bboxes_with_cls_id = np.array(self.truth.get(img_path), dtype=np.float)
         img = Image.open(os.path.join(self.cfg.dataset_dir, img_path)).convert("RGB")
         img = img.resize((self.cfg.width, self.cfg.height))
+        img = F.to_tensor(img)
         num_objs = len(bboxes_with_cls_id)
         target = {}
         target['boxes'] = torch.as_tensor(bboxes_with_cls_id[...,:4], dtype=torch.float32)
