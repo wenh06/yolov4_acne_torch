@@ -19,6 +19,8 @@ from cfg_acne04 import Cfg
 from tool.utils import nms_cpu
 from tool.torch_utils import do_detect
 from tool.tv_reference.utils import collate_fn as val_collate
+from tool.tv_reference.coco_utils import get_coco_api_from_dataset
+from tool.tv_reference.coco_eval import CocoEvaluator
 
 
 _CV2_GREEN = (0, 255, 0)
