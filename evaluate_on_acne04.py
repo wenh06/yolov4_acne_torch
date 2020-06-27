@@ -9,12 +9,16 @@ from numbers import Real
 import matplotlib.pyplot as plt
 
 import torch
+from torch.utils.data import DataLoader
 import cv2
 from easydict import EasyDict as ED
 
+from models import Yolov4
+from dataset_acne04 import ACNE04
 from cfg_acne04 import Cfg
 from tool.utils import nms_cpu
 from tool.torch_utils import do_detect
+from tool.tv_reference.utils import collate_fn as val_collate
 
 
 _CV2_GREEN = (0, 255, 0)
@@ -155,3 +159,73 @@ def inference(model, image_path, conf_thresh=[0.5], use_cuda=False):
     }
 
     return ret
+
+
+def evaluate_all(device=None):
+    """
+    """
+    device = device or torch.device("cuda")
+    print(f"device = {device}")
+
+    val_dataset = ACNE04(label_path=Cfg.val_label, cfg=Cfg, train=False)
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=Cfg.batch // Cfg.subdivisions,
+        shuffle=True,
+        num_workers=8,
+        pin_memory=True,
+        drop_last=True,
+        collate_fn=val_collate,
+    )
+    coco = get_coco_api_from_dataset(val_loader.dataset)
+
+    all_models = glob.glob(os.path.join(Cfg.checkpoints, "*.pth"))
+    all_models.sort(key = lambda fp: int(os.path.splitext(os.path.basename(fp))[0].replace("Yolov4_epoch", "")))
+
+    for p in all_models:
+        model = Yolov4(None,1,True)
+        model.load_state_dict(torch.load(model_path,map_location=device))
+        model.eval()
+        coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
+
+        for images, targets in data_loader:
+            images = [[img] for img in images]
+            images = np.concatenate(images, axis=0)
+            images = images.transpose(0, 3, 1, 2)
+            images = torch.from_numpy(images).div(255.0)
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            model_time = time.time()
+            outputs = model(images)
+
+            # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+            model_time = time.time() - model_time
+
+            outputs = outputs.cpu().detach().numpy()
+            res = {}
+            for target, output in zip(targets, outputs):
+                boxes = torch.as_tensor(output[...,:4], dtype=torch.float32)
+                labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
+                scores = torch.as_tensor(output[...,-1], dtype=torch.float32)
+                res[target["image_id"].item()] = {
+                    "boxes": boxes,
+                    "scores": scores,
+                    "labels": labels,
+                }
+            
+            evaluator_time = time.time()
+            coco_evaluator.update(res)
+            evaluator_time = time.time() - evaluator_time
+
+        # gather the stats from all processes
+        coco_evaluator.synchronize_between_processes()
+
+        # accumulate predictions from all images
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+
+
+if __name__ == "__main__":
+    evaluate_all()
