@@ -389,7 +389,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
 
 @torch.no_grad()
 def evaluate(model, data_loader, device, logger):
-    """ not finished, not tested,
+    """ finished, has bugs
     """
     cpu_device = torch.device("cpu")
     model.eval()
