@@ -186,7 +186,7 @@ def evaluate_all(device=None):
     all_models.sort(key = lambda fp: int(os.path.splitext(os.path.basename(fp))[0].replace("Yolov4_epoch", "")))
 
     for model_path in all_models:
-        print(f"eval on {os.path.splitext(os.path.basename(fp))[0]}")
+        print(f"eval on {os.path.splitext(os.path.basename(model_path))[0]}")
         model = Yolov4(None,1,True)
         model.load_state_dict(torch.load(model_path,map_location=device))
         model.eval()
