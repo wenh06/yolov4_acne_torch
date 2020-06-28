@@ -31,7 +31,7 @@ from tool.utils_iou import (
 from tool.utils import post_processing, plot_boxes_cv2
 from tool.tv_reference.utils import MetricLogger
 from tool.tv_reference.utils import collate_fn as val_collate
-from tool.tv_reference.coco_utils import get_coco_api_from_dataset
+from tool.tv_reference.coco_utils import get_coco_api_from_dataset, convert_to_coco_api
 from tool.tv_reference.coco_eval import CocoEvaluator
 
 
@@ -397,7 +397,7 @@ def evaluate(model, data_loader, cfg, device, logger, **kwargs):
     model.eval()
     header = 'Test:'
 
-    coco = get_coco_api_from_dataset(data_loader.dataset)
+    coco = convert_to_coco_api(data_loader.dataset, bbox_fmt='coco')
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"], bbox_fmt='coco')
 
     for images, targets in data_loader:

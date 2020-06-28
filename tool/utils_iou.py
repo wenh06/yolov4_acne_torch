@@ -51,7 +51,6 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
 
     N, K = bboxes_a.shape[0], bboxes_b.shape[0]
 
-    # top left
     if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
         # top left
         tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
@@ -61,6 +60,7 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]
         # bb_* can also be seen vectors representing box_width, box_height
     elif fmt.lower() == 'yolo':  # xcen, ycen, w, h
+        # top left
         tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right
@@ -68,7 +68,15 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
         bb_a = bboxes_a[:, 2:]
         bb_b = bboxes_b[:, 2:]
-
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        # top left
+        tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2])
+        # bottom right
+        br_intersect = torch.min((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:]),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:]))
+        bb_a = bboxes_a[:, 2:]
+        bb_b = bboxes_b[:, 2:]
+    
     area_a = torch.prod(bb_a, 1)
     area_b = torch.prod(bb_b, 1)
     
@@ -91,11 +99,18 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         # bottom right
         br_union = torch.max(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
     elif fmt.lower() == 'yolo':  # xcen, ycen, w, h
+        # top left
         tl_union = torch.min((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right
         br_union = torch.max((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        # top left
+        tl_union = torch.min(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2])
+        # bottom right
+        br_union = torch.max((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:]),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:]))
     
     # c for covering, of shape `(N,K,2)`
     # the last dim is box width, box hight
@@ -114,6 +129,9 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     elif fmt.lower() == 'yolo':  # xcen, ycen, w, h
         centre_a = bboxes_a[..., : 2]
         centre_b = bboxes_b[..., : 2]
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        centre_a = bboxes_a[..., 2 :] + bboxes_a[..., : 2]/2
+        centre_b = bboxes_b[..., 2 :] + bboxes_b[..., : 2]/2
 
     centre_dist = torch.norm(centre_a[:, np.newaxis] - centre_b, p='fro', dim=2)
     diag_len = torch.norm(bboxes_c, p='fro', dim=2)

@@ -20,7 +20,7 @@ from cfg_acne04 import Cfg
 from tool.utils import nms_cpu
 from tool.torch_utils import do_detect
 from tool.tv_reference.utils import collate_fn as val_collate
-from tool.tv_reference.coco_utils import get_coco_api_from_dataset
+from tool.tv_reference.coco_utils import get_coco_api_from_dataset, convert_to_coco_api
 from tool.tv_reference.coco_eval import CocoEvaluator
 
 
@@ -180,7 +180,7 @@ def evaluate_all(device=None):
         drop_last=True,
         collate_fn=val_collate,
     )
-    coco = get_coco_api_from_dataset(val_loader.dataset)
+    coco = convert_to_coco_api(val_loader.dataset, bbox_fmt='coco')
 
     all_models = glob.glob(os.path.join(Cfg.checkpoints, "*.pth"))
     all_models.sort(key = lambda fp: int(os.path.splitext(os.path.basename(fp))[0].replace("Yolov4_epoch", "")))
@@ -189,29 +189,36 @@ def evaluate_all(device=None):
         print(f"eval on {os.path.splitext(os.path.basename(model_path))[0]}")
         model = Yolov4(None,1,True)
         model.load_state_dict(torch.load(model_path,map_location=device))
+        model.to(device)
         model.eval()
         coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
         for images, targets in val_loader:
-            images = [[img] for img in images]
-            images = np.concatenate(images, axis=0)
-            images = images.transpose(0, 3, 1, 2)
-            images = torch.from_numpy(images).div(255.0)
+            model_input = [[cv2.resize(img, (cfg.w, cfg.h))] for img in images]
+            model_input = np.concatenate(model_input, axis=0)
+            model_input = model_input.transpose(0, 3, 1, 2)
+            model_input = torch.from_numpy(model_input).div(255.0)
+            model_input = model_input.to(device)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             model_time = time.time()
-            outputs = model(images)
+            outputs = model(model_input)
 
             # outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
             model_time = time.time() - model_time
 
             outputs = outputs.cpu().detach().numpy()
             res = {}
-            for target, output in zip(targets, outputs):
-                boxes = output[...,:4]  # output boxes in yolo format
+            for img, target, output in zip(images, targets, outputs):
+                img_height, img_width = img.shape[:2]
+                boxes = output[...,:4].copy()  # output boxes in yolo format
                 boxes[...,:2] = boxes[...,:2] - boxes[...,2:]/2  # to coco format
+                boxes[...,0] = boxes[...,0]*img_width
+                boxes[...,1] = boxes[...,1]*img_height
+                boxes[...,2] = boxes[...,2]*img_width
+                boxes[...,3] = boxes[...,3]*img_height
                 boxes = torch.as_tensor(boxes, dtype=torch.float32)
                 labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
                 scores = torch.as_tensor(output[...,-1], dtype=torch.float32)

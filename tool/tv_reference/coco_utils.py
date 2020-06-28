@@ -143,7 +143,10 @@ def _coco_remove_images_without_annotations(dataset, cat_list=None):
     return dataset
 
 
-def convert_to_coco_api(ds):
+def convert_to_coco_api(ds, bbox_fmt='voc'):
+    """
+    """
+    print("in function convert_to_coco_api...")
     coco_ds = COCO()
     # annotation IDs need to start at 1, not 0, see torchvision issue #1530
     ann_id = 1
@@ -160,7 +163,15 @@ def convert_to_coco_api(ds):
         img_dict['width'] = img.shape[-1]
         dataset['images'].append(img_dict)
         bboxes = targets["boxes"]
-        bboxes[:, 2:] -= bboxes[:, :2]
+        # to coco format: xmin, ymin, w, h
+        if bbox_fmt.lower() == "voc":  # xmin, ymin, xmax, ymax
+            bboxes[:, 2:] -= bboxes[:, :2]
+        elif bbox_fmt.lower() == "yolo":  # xcen, ycen, w, h
+            bboxes[:, :2] = bboxes[:, :2] - bboxes[:, 2:]/2
+        elif bbox_fmt.lower() == "coco":
+            pass
+        else:
+            raise ValueError(f"bounding box format {bbox_fmt} not supported!")
         bboxes = bboxes.tolist()
         labels = targets['labels'].tolist()
         areas = targets['area'].tolist()
