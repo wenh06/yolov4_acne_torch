@@ -364,8 +364,11 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                 pbar.update(images.shape[0])
                 
             # TODO: eval for each epoch using `evaluate`
-            evaluator = evaluate(model, val_loader, config, device, logger)
-            model.train()
+            eval_model = Yolov4(None,1,True)
+            eval_model.load_state_dict(model.state_dict)
+            eval_model.to(device)
+            evaluator = evaluate(eval_model, val_loader, config, device, logger)
+            del eval_model
 
             stats = evaluator.coco_eval['bbox'].stats
             writer.add_scalar('train/AP', stats[0], global_step)
