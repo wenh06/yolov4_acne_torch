@@ -109,7 +109,7 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
         centre_a = (bboxes_a[..., 2 :] + bboxes_a[..., : 2]) / 2
         centre_b = (bboxes_b[..., 2 :] + bboxes_b[..., : 2]) / 2
-    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+    elif fmt.lower() == 'yolo':  # xmin, ymin, w, h
         centre_a = (bboxes_a[..., : 2] + bboxes_a[..., 2 :]) / 2
         centre_b = (bboxes_b[..., : 2] + bboxes_b[..., 2 :]) / 2
 
@@ -176,7 +176,7 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         if fmt.lower() == 'voc':  # xmin, ymin, xmax, ymax
             ba = ED({"xmin":ba[0]-adjust_x, "ymin":ba[1]-adjust_y, "xmax":ba[2]-adjust_x, "ymax":ba[3]-adjust_y})
             bb = ED({"xmin":bb[0]-adjust_x, "ymin":bb[1]-adjust_y, "xmax":bb[2]-adjust_x, "ymax":bb[3]-adjust_y})
-        elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        elif fmt.lower() == 'yolo':  # xmin, ymin, w, h
             ba = ED({"xmin":ba[0]-adjust_x, "ymin":ba[1], "xmax":ba[0]+ba[2]-adjust_x, "ymax":ba[1]+ba[3]-adjust_y})
             bb = ED({"xmin":bb[0]-adjust_x, "ymin":bb[1], "xmax":bb[0]+bb[2]-adjust_x, "ymax":bb[1]+bb[3]-adjust_y})
 
