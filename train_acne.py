@@ -537,7 +537,7 @@ def get_args(**kwargs):
         help='maximum number of checkpoints to keep. If set 0, all checkpoint files are kept',
         dest='keep_checkpoint_max')
     parser.add_argument(
-        '-optimizer', type='str', default='adam',
+        '-optimizer', type=str, default='adam',
         help='training optimizer',
         dest='TRAIN_OPTIMIZER')
     
