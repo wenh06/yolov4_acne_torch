@@ -364,7 +364,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                 pbar.update(images.shape[0])
                 
             # TODO: eval for each epoch using `evaluate`
-            eval_model = Yolov4(yolov4conv137weight=None, config.classes, inference=True)
+            eval_model = Yolov4(yolov4conv137weight=None, n_classes=config.classes, inference=True)
             eval_model.load_state_dict(model.state_dict())
             eval_model.to(device)
             evaluator = evaluate(eval_model, val_loader, config, device, logger)
