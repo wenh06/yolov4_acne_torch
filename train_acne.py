@@ -9,6 +9,7 @@ import time
 import logging
 import os, sys
 from collections import deque
+import datetime
 
 import cv2
 from tqdm import tqdm
@@ -360,11 +361,25 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                     if logger:
                         logger.info(f'Train step_{global_step}: loss : {loss.item()},loss xy : {loss_xy.item()}, loss wh : {loss_wh.item()}, loss obj : {loss_obj.item()}, loss cls : {loss_cls.item()}, loss l2 : {loss_l2.item()}, lr : {scheduler.get_lr()[0] * config.batch}')
 
-                # TODO: eval for each epoch using `evaluate`
-                # evaluate(model, val_loader, device, logger)
-                # model.train()
-
                 pbar.update(images.shape[0])
+                
+            # TODO: eval for each epoch using `evaluate`
+            evaluator = evaluate(model, val_loader, config, device, logger)
+            model.train()
+
+            stats = evaluator.coco_eval['bbox'].stats
+            writer.add_scalar('train/AP', stats[0], global_step)
+            writer.add_scalar('train/AP50', stats[1], global_step)
+            writer.add_scalar('train/AP75', stats[2], global_step)
+            writer.add_scalar('train/AP_small', stats[3], global_step)
+            writer.add_scalar('train/AP_medium', stats[4], global_step)
+            writer.add_scalar('train/AP_large', stats[5], global_step)
+            writer.add_scalar('train/AR1', stats[6], global_step)
+            writer.add_scalar('train/AR10', stats[7], global_step)
+            writer.add_scalar('train/AR100', stats[8], global_step)
+            writer.add_scalar('train/AR_small', stats[9], global_step)
+            writer.add_scalar('train/AR_medium', stats[10], global_step)
+            writer.add_scalar('train/AR_large', stats[11], global_step)
 
             if save_ckpt:
                 try:
@@ -373,7 +388,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                         logger.info('Created checkpoint directory')
                 except OSError:
                     pass
-                save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}.pth')
+                save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}_{_get_date_str()}.pth')
                 torch.save(model.state_dict(), save_path)
                 saved_models.append(save_path)
                 # remove outdated models
@@ -405,6 +420,7 @@ def evaluate(model, data_loader, cfg, device, logger, **kwargs):
         model_input = np.concatenate(model_input, axis=0)
         model_input = model_input.transpose(0, 3, 1, 2)
         model_input = torch.from_numpy(model_input).div(255.0)
+        model_input = model_input.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         if torch.cuda.is_available():
@@ -535,15 +551,10 @@ def get_args(**kwargs):
 def init_logger(log_file=None, log_dir=None, mode='a', verbose=0):
     """
     """
-    import datetime
-    def get_date_str():
-        now = datetime.datetime.now()
-        return now.strftime('%Y-%m-%d_%H-%M')
-
     if log_dir is None:
         log_dir = '~/temp/log/'
     if log_file is None:
-        log_file = f'log_{get_date_str()}.txt'
+        log_file = f'log_{_get_date_str()}.txt'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_file = os.path.join(log_dir, log_file)
@@ -582,7 +593,6 @@ def init_logger(log_file=None, log_dir=None, mode='a', verbose=0):
 
 
 def _get_date_str():
-    import datetime
     now = datetime.datetime.now()
     return now.strftime('%Y-%m-%d_%H-%M')
 

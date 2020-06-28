@@ -194,7 +194,7 @@ def evaluate_all(device=None):
         coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
 
         for images, targets in val_loader:
-            model_input = [[cv2.resize(img, (cfg.w, cfg.h))] for img in images]
+            model_input = [[cv2.resize(img, (Cfg.w, Cfg.h))] for img in images]
             model_input = np.concatenate(model_input, axis=0)
             model_input = model_input.transpose(0, 3, 1, 2)
             model_input = torch.from_numpy(model_input).div(255.0)
