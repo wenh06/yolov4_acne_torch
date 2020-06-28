@@ -62,6 +62,14 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
         bb_a = bboxes_a[:, 2:]
         bb_b = bboxes_b[:, 2:]
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        # top left
+        tl_intersect = torch.max(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2])
+        # bottom right
+        br_intersect = torch.min((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:]),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:]))
+        bb_a = bboxes_a[:, 2:]
+        bb_b = bboxes_b[:, 2:]
 
     area_a = torch.prod(bb_a, 1)
     area_b = torch.prod(bb_b, 1)
@@ -90,6 +98,12 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         # bottom right
         br_union = torch.max((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2))
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        # top left
+        tl_union = torch.min(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2])
+        # bottom right
+        br_union = torch.max((bboxes_a[:, np.newaxis, :2] + bboxes_a[:, np.newaxis, 2:]),
+                       (bboxes_b[:, :2] + bboxes_b[:, 2:]))
     
     # c for covering, of shape `(N,K,2)`
     # the last dim is box width, box hight
@@ -112,6 +126,9 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     elif fmt.lower() == 'yolo':  # xcen, ycen, w, h
         centre_a = (bboxes_a[..., : 2] + bboxes_a[..., 2 :]) / 2
         centre_b = (bboxes_b[..., : 2] + bboxes_b[..., 2 :]) / 2
+    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+        centre_a = bboxes_a[..., 2 :] + bboxes_a[..., : 2]/2
+        centre_b = bboxes_b[..., 2 :] + bboxes_b[..., : 2]/2
 
     centre_dist = torch.norm(centre_a[:, np.newaxis] - centre_b, p='fro', dim=2)
     diag_len = torch.norm(bboxes_c, p='fro', dim=2)
@@ -177,8 +194,11 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
             ba = ED({"xmin":ba[0]-adjust_x, "ymin":ba[1]-adjust_y, "xmax":ba[2]-adjust_x, "ymax":ba[3]-adjust_y})
             bb = ED({"xmin":bb[0]-adjust_x, "ymin":bb[1]-adjust_y, "xmax":bb[2]-adjust_x, "ymax":bb[3]-adjust_y})
         elif fmt.lower() == 'yolo':  # xcen, ycen, w, h
-            ba = ED({"xmin":ba[0]-adjust_x, "ymin":ba[1], "xmax":ba[0]+ba[2]-adjust_x, "ymax":ba[1]+ba[3]-adjust_y})
-            bb = ED({"xmin":bb[0]-adjust_x, "ymin":bb[1], "xmax":bb[0]+bb[2]-adjust_x, "ymax":bb[1]+bb[3]-adjust_y})
+            ba = ED({"xmin":ba[0]-ba[2]//2-adjust_x, "ymin":ba[1]-ba[3]//2-adjust_y, "xmax":ba[0]+ba[2]//2-adjust_x, "ymax":ba[1]+ba[3]//2-adjust_y})
+            bb = ED({"xmin":bb[0]-bb[2]//2-adjust_x, "ymin":bb[1]-bb[3]//2-adjust_y, "xmax":bb[0]+bb[2]//2-adjust_x, "ymax":bb[1]+bb[3]//2-adjust_y})
+        elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+            ba = ED({"xmin":ba[0]-adjust_x, "ymin":ba[1]-adjust_y, "xmax":ba[0]+ba[2]-adjust_x, "ymax":ba[1]+ba[3]-adjust_y})
+            bb = ED({"xmin":bb[0]-adjust_x, "ymin":bb[1]-adjust_y, "xmax":bb[0]+bb[2]-adjust_x, "ymax":bb[1]+bb[3]-adjust_y})
 
         print(f"ba = {ba}")
         print(f"bb = {bb}")
