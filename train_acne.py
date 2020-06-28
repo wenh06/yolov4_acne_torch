@@ -439,6 +439,7 @@ def evaluate(model, data_loader, cfg, device, logger, **kwargs):
             debug = [debug]
         debug = [item.lower() for item in debug]
         if 'iou' in debug:
+            from tool.utils_iou_test import bboxes_iou_test
             ouput_boxes = np.array(post_processing(None, 0.5, 0.5, outputs)[0])[...,:4]
             img_height, img_width = images[0].shape[:2]
             ouput_boxes[...,0] = ouput_boxes[...,0] * img_width
@@ -446,11 +447,12 @@ def evaluate(model, data_loader, cfg, device, logger, **kwargs):
             ouput_boxes[...,2] = ouput_boxes[...,2] * img_width
             ouput_boxes[...,3] = ouput_boxes[...,3] * img_height
             # coco format to yolo format
-            truth_boxes = targets[0]['boxes'].numpy()
-            truth_boxes[...,0] = truth_boxes[...,0] + truth_boxes[...,2]/2
-            truth_boxes[...,1] = truth_boxes[...,1] + truth_boxes[...,3]/2
-            iou = bboxes_iou(ouput_boxes, truth_boxes, fmt='yolo')
+            truth_boxes = targets[0]['boxes'].numpy().copy()
+            truth_boxes[...,:2] = truth_boxes[...,:2] + truth_boxes[...,2:]/2
+            iou = bboxes_iou_test(torch.Tensor(ouput_boxes), torch.Tensor(truth_boxes), fmt='yolo')
             print(f"iou of first image = {iou}")
+        if len(debug) > 0:
+            return
         
         evaluator_time = time.time()
         coco_evaluator.update(res)

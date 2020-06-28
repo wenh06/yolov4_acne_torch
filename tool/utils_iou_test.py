@@ -54,7 +54,7 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         br_intersect = torch.min(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
         bb_a = bboxes_a[:, 2:] - bboxes_a[:, :2]  # w, h
         bb_b = bboxes_b[:, 2:] - bboxes_b[:, :2]  # w, h
-    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+    elif fmt.lower() == 'yolo':  # xmin, ymin, w, h
         tl_intersect = torch.max((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right
@@ -84,7 +84,7 @@ def bboxes_iou_test(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
         tl_union = torch.min(bboxes_a[:, np.newaxis, :2], bboxes_b[:, :2]) # of shape `(N,K,2)`
         # bottom right
         br_union = torch.max(bboxes_a[:, np.newaxis, 2:], bboxes_b[:, 2:])
-    elif fmt.lower() == 'coco':  # xmin, ymin, w, h
+    elif fmt.lower() == 'yolo':  # xmin, ymin, w, h
         tl_union = torch.min((bboxes_a[:, np.newaxis, :2] - bboxes_a[:, np.newaxis, 2:] / 2),
                        (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2))
         # bottom right

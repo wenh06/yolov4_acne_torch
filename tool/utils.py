@@ -180,7 +180,7 @@ def post_processing(img, conf_thresh, nms_thresh, output):
     t1 = time.time()
 
     if type(output).__name__ != 'ndarray':
-        _output = output.cpu().detach().numpy()
+        _output = output.cpu().detach().numpy().copy()
     else:
         _output = output.copy()
 

@@ -161,7 +161,7 @@ class CocoEvaluator(object):
 
 
 def convert_to_xywh(boxes, fmt='voc'):
-    elif fmt.lower() == 'voc':
+    if fmt.lower() == 'voc':
         xmin, ymin, xmax, ymax = boxes.unbind(1)
         return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
     elif fmt.lower() == 'yolo':
