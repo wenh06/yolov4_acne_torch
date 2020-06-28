@@ -184,11 +184,12 @@ def evaluate_all(device=None):
 
     all_models = glob.glob(os.path.join(Cfg.checkpoints, "*.pth"))
     all_models.sort(key = lambda fp: int(os.path.splitext(os.path.basename(fp))[0].replace("Yolov4_epoch", "")))
+    state_dict = torch.load(model_path, map_location=device)
 
     for model_path in all_models:
         print(f"eval on {os.path.splitext(os.path.basename(model_path))[0]}")
         model = Yolov4(None,1,True)
-        model.load_state_dict(torch.load(model_path,map_location=device))
+        model.load_state_dict(state_dict)
         model.to(device)
         model.eval()
         coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
@@ -238,6 +239,9 @@ def evaluate_all(device=None):
         # accumulate predictions from all images
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
+
+        del model
+        del coco_evaluator
 
 
 if __name__ == "__main__":
