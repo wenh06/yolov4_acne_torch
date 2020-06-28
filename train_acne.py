@@ -28,7 +28,7 @@ from models import Yolov4
 from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
-from tool.utils import post_processing
+from tool.utils import post_processing, plot_boxes_cv2
 from tool.tv_reference.utils import MetricLogger
 from tool.tv_reference.utils import collate_fn as val_collate
 from tool.tv_reference.coco_utils import get_coco_api_from_dataset
@@ -390,7 +390,7 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, cfg, device, logger):
+def evaluate(model, data_loader, cfg, device, logger, **kwargs):
     """ finished, has bugs
     """
     cpu_device = torch.device("cpu")
@@ -398,7 +398,7 @@ def evaluate(model, data_loader, cfg, device, logger):
     header = 'Test:'
 
     coco = get_coco_api_from_dataset(data_loader.dataset)
-    coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"])
+    coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"], bbox_fmt='coco')
 
     for images, targets in data_loader:
         model_input = [[cv2.resize(img, (cfg.w, cfg.h))] for img in images]
@@ -419,7 +419,7 @@ def evaluate(model, data_loader, cfg, device, logger):
         res = {}
         for img, target, output in zip(images, targets, outputs):
             img_height, img_width = img.shape[:2]
-            boxes = output[...,:4]  # output boxes in yolo format
+            boxes = output[...,:4].copy()  # output boxes in yolo format
             boxes[...,:2] = boxes[...,:2] - boxes[...,2:]/2  # to coco format
             boxes[...,0] = boxes[...,0]*img_width
             boxes[...,1] = boxes[...,1]*img_height
@@ -433,6 +433,24 @@ def evaluate(model, data_loader, cfg, device, logger):
                 "scores": scores,
                 "labels": labels,
             }
+
+        debug = kwargs.get("debug", [])
+        if isinstance(debug, str):
+            debug = [debug]
+        debug = [item.lower() for item in debug]
+        if 'iou' in debug:
+            ouput_boxes = np.array(post_processing(None, 0.5, 0.5, outputs)[0])[...,:4]
+            img_height, img_width = images[0].shape[:2]
+            ouput_boxes[...,0] = ouput_boxes[...,0] * img_width
+            ouput_boxes[...,1] = ouput_boxes[...,1] * img_height
+            ouput_boxes[...,2] = ouput_boxes[...,2] * img_width
+            ouput_boxes[...,3] = ouput_boxes[...,3] * img_height
+            # coco format to yolo format
+            truth_boxes = targets[0]['boxes'].numpy()
+            truth_boxes[...,0] = truth_boxes[...,0] + truth_boxes[...,2]/2
+            truth_boxes[...,1] = truth_boxes[...,1] + truth_boxes[...,3]/2
+            iou = bboxes_iou(ouput_boxes, truth_boxes, fmt='yolo')
+            print(f"iou of first image = {iou}")
         
         evaluator_time = time.time()
         coco_evaluator.update(res)

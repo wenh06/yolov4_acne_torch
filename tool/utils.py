@@ -117,6 +117,7 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     height = img_with_boxes.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
+        # yolo format to voc format
         x1 = int((box[0] - box[2] / 2.0) * width)
         y1 = int((box[1] - box[3] / 2.0) * height)
         x2 = int((box[0] + box[2] / 2.0) * width)
@@ -179,13 +180,15 @@ def post_processing(img, conf_thresh, nms_thresh, output):
     t1 = time.time()
 
     if type(output).__name__ != 'ndarray':
-        output = output.cpu().detach().numpy()
+        _output = output.cpu().detach().numpy()
+    else:
+        _output = output.copy()
 
     # [batch, num, 4]
-    box_array = output[:, :, :4]
+    box_array = _output[:, :, :4]
 
     # [batch, num, num_classes]
-    confs = output[:, :, 4:]
+    confs = _output[:, :, 4:]
 
     # [batch, num, num_classes] --> [batch, num]
     max_conf = np.max(confs, axis=2)
