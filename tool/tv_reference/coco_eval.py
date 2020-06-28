@@ -17,10 +17,12 @@ from . import utils
 
 
 class CocoEvaluator(object):
-    def __init__(self, coco_gt, iou_types):
+    def __init__(self, coco_gt, iou_types, bbox_fmt='coco'):
         assert isinstance(iou_types, (list, tuple))
         coco_gt = copy.deepcopy(coco_gt)
         self.coco_gt = coco_gt
+        self.bbox_fmt = bbox_fmt.lower()
+        assert self.bbox_fmt in ['voc', 'coco', 'yolo']
 
         self.iou_types = iou_types
         self.coco_eval = {}
@@ -74,10 +76,12 @@ class CocoEvaluator(object):
         for original_id, prediction in predictions.items():
             if len(prediction) == 0:
                 continue
-
-            # boxes = prediction["boxes"]
-            # boxes = convert_to_xywh(boxes).tolist()
-            boxes = prediction["boxes"].tolist()
+            
+            if self.bbox_fmt == 'coco':
+                boxes = prediction["boxes"].tolist()
+            else:
+                boxes = prediction["boxes"]
+                boxes = convert_to_xywh(boxes, fmt=self.bbox_fmt).tolist()
             scores = prediction["scores"].tolist()
             labels = prediction["labels"].tolist()
 
@@ -135,8 +139,8 @@ class CocoEvaluator(object):
             if len(prediction) == 0:
                 continue
 
-            boxes = prediction["boxes"]
-            boxes = convert_to_xywh(boxes).tolist()
+            # boxes = prediction["boxes"]
+            # boxes = convert_to_xywh(boxes).tolist()
             scores = prediction["scores"].tolist()
             labels = prediction["labels"].tolist()
             keypoints = prediction["keypoints"]
@@ -156,9 +160,13 @@ class CocoEvaluator(object):
         return coco_results
 
 
-def convert_to_xywh(boxes):
-    xmin, ymin, xmax, ymax = boxes.unbind(1)
-    return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
+def convert_to_xywh(boxes, fmt='voc'):
+    elif fmt.lower() == 'voc':
+        xmin, ymin, xmax, ymax = boxes.unbind(1)
+        return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
+    elif fmt.lower() == 'yolo':
+        xcen, ycen, w, h = boxes.unbind(1)
+        return torch.stack((xcen-w/2, ycen-h/2, w, h), dim=1)
 
 
 def merge(img_ids, eval_imgs):
