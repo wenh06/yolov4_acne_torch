@@ -4,13 +4,15 @@
 import random
 import sys
 import os
-from typing import Union, Tuple
+import glob
+from typing import Union, Optional, Tuple, Dict
 
 import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
 from easydict import EasyDict as ED
+import xml.etree.ElementTree as ET
 import torch
 from torchvision.transforms import functional as F
 from torch.utils.data.dataset import Dataset
@@ -94,7 +96,7 @@ class ACNE04(Yolo_dataset):
         # img = torch.from_numpy(img.transpose(2, 0, 1)).float().div(255.0).unsqueeze(0)
         num_objs = len(bboxes_with_cls_id)
         target = {}
-        # boxes should be in coco format
+        # boxes to coco format
         boxes = bboxes_with_cls_id[...,:4]
         boxes[..., 2:] = boxes[..., 2:] - boxes[..., :2]  # box width, box height
         target['boxes'] = torch.as_tensor(boxes, dtype=torch.float32)
@@ -148,3 +150,88 @@ def get_image_id(filename:str) -> int:
     lv = lv.replace("levle", "")
     no = f"{int(no):04d}"
     return int(lv+no)
+
+
+def voc_to_df(img_dir:str, ann_dir:str, save_path:Optional[str]=None, class_map:Optional[Dict[str,str]]=None, **kwargs) -> pd.DataFrame:
+    """ finished, checked,
+
+    pascal voc annotations (in xml format) to one DataFrame (csv file)
+
+    Parameters:
+    -----------
+    img_dir: str,
+        directory of the image files
+    ann_dir: str,
+        directory of the bounding box annotation xml files
+    save_path: str, optional,
+        path to store the csv file
+    class_map: dict, optional,
+        label map, from class names of the annotations to the class names for training
+
+    Returns:
+    --------
+    bbox_df: DataFrame,
+        annotations in one DataFrame
+    """
+    xml_list = []
+    img_dir_filenames = os.listdir(img_dir)
+    for xml_file in glob.glob(os.path.join(ann_dir, '*.xml')):
+        tree = ET.parse(xml_file)
+        img_file = os.path.splitext(os.path.basename(xml_file))[0]
+        img_file = [os.path.join(img_dir, item) for item in img_dir_filenames if item.startswith(img_file)]
+        if len(img_file) != 1:
+            print(f"number of images corresponding to {os.path.basename(xml_file)} is {len(img_file)}")
+            continue
+        img_file = img_file[0]
+        root = tree.getroot()
+        if len(root.findall('object')) == 0:
+            print('{} has no bounding box annotation'.format(xml_file))
+        for member in root.findall('object'):
+            fw = int(root.find('size').find('width').text)
+            fh = int(root.find('size').find('height').text)
+            # or obtain fw, fh from image read from `img_file`
+            subcls_name = member.find('name').text
+            xmin = int(member.find('bndbox').find('xmin').text)
+            ymin = int(member.find('bndbox').find('ymin').text)
+            xmax = int(member.find('bndbox').find('xmax').text)
+            ymax = int(member.find('bndbox').find('ymax').text)
+            box_width = xmax-xmin
+            box_height = ymax-ymin
+            box_area = box_width*box_height
+            if box_area <= 0:
+                continue
+            values = {
+                'filename': root.find('filename').text if root.find('filename') is not None else '',
+                'width': fw,
+                'height': fh,
+                'segmented': root.find('segmented').text if root.find('segmented') is not None else '',
+                'subclass': subcls_name,
+                'pose': member.find('pose').text if member.find('pose') is not None else '',
+                'truncated': member.find('truncated').text if member.find('truncated') is not None else '',
+                'difficult': member.find('difficult').text if member.find('difficult') is not None else '',
+                'xmin': xmin,
+                'ymin': ymin,
+                'xmax': xmax,
+                'ymax': ymax,
+                'box_width': box_width,
+                'box_height': box_height,
+                'box_area': box_area,
+            }
+            xml_list.append(values)
+    column_names = ['filename', 'width', 'height', 'segmented', 'pose', 'truncated', 'difficult', 'xmin', 'ymin', 'xmax', 'ymax', 'box_width', 'box_height', 'subclass', 'box_area']
+    bbox_df = pd.DataFrame(xml_list, columns=column_names)
+    if class_map is None:
+        bbox_df['class'] = bbox_df['subclass']
+    else:
+        bbox_df['class'] = bbox_df['subclass'].apply(lambda sc:class_map[sc])
+    column_names = [
+        'filename', 'class', 'subclass',
+        'segmented', 'pose', 'truncated', 'difficult',
+        'width', 'height',
+        'xmin', 'ymin', 'xmax', 'ymax',
+        'box_width', 'box_height', 'box_area',
+    ]
+    bbox_df = bbox_df[column_names]
+    if save_path is not None:
+        bbox_df.to_csv(save_path, index=False)
+    return bbox_df
