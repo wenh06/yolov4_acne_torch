@@ -468,14 +468,10 @@ if __name__ == "__main__":
     logging.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     logging.info(f'Using device {device}')
 
-<<<<<<< HEAD
-    model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
-=======
     if cfg.use_darknet_cfg:
         model = Darknet(cfg.cfgfile)
     else:
         model = Yolov4(cfg.pretrained, n_classes=cfg.classes)
->>>>>>> 439fff60a096656add867d79d908fba0f2fb6751
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
