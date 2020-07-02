@@ -408,12 +408,12 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, cfg, device, logger, **kwargs):
-    """ finished, has bugs
+def evaluate(model, data_loader, cfg, device, logger=None, **kwargs):
+    """ finished, tested
     """
-    cpu_device = torch.device("cpu")
+    # cpu_device = torch.device("cpu")
     model.eval()
-    header = 'Test:'
+    # header = 'Test:'
 
     coco = convert_to_coco_api(data_loader.dataset, bbox_fmt='coco')
     coco_evaluator = CocoEvaluator(coco, iou_types = ["bbox"], bbox_fmt='coco')
