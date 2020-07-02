@@ -1,6 +1,10 @@
 """
 """
+import os
 from easydict import EasyDict as ED
+
+
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 Cfg = ED()
 Cfg.batch = 2

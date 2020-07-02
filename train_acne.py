@@ -8,12 +8,12 @@ More reference:
 import time
 import logging
 import os, sys
+import argparse
 from collections import deque
 import datetime
 
 import cv2
 from tqdm import tqdm
-import argparse
 import numpy as np
 import torch
 import torch.nn as nn
@@ -30,9 +30,9 @@ from tool.utils_iou import (
     bboxes_iou, bboxes_giou, bboxes_diou, bboxes_ciou,
 )
 from tool.utils import post_processing, plot_boxes_cv2
-from tool.tv_reference.utils import MetricLogger
+# from tool.tv_reference.utils import MetricLogger
 from tool.tv_reference.utils import collate_fn as val_collate
-from tool.tv_reference.coco_utils import get_coco_api_from_dataset, convert_to_coco_api
+from tool.tv_reference.coco_utils import convert_to_coco_api
 from tool.tv_reference.coco_eval import CocoEvaluator
 
 
@@ -393,6 +393,8 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                     pass
                 save_path = os.path.join(config.checkpoints, f'{save_prefix}{epoch + 1}_{_get_date_str()}.pth')
                 torch.save(model.state_dict(), save_path)
+                if logger:
+                    logger.info(f'Checkpoint {epoch + 1} saved!')
                 saved_models.append(save_path)
                 # remove outdated models
                 if len(saved_models) > config.keep_checkpoint_max > 0:
@@ -401,8 +403,6 @@ def train(model, device, config, epochs=5, batch_size=1, save_ckpt=True, log_ste
                         os.remove(model_to_remove)
                     except:
                         logger.info(f'failed to remove {model_to_remove}')
-                if logger:
-                    logger.info(f'Checkpoint {epoch + 1} saved!')
 
     writer.close()
 
@@ -540,7 +540,7 @@ def get_args(**kwargs):
         dest='iou_type')
     parser.add_argument(
         '-keep-checkpoint-max', type=int, default=10,
-        help='maximum number of checkpoints to keep. If set 0, all checkpoint files are kept',
+        help='maximum number of checkpoints to keep. If set 0, all checkpoints will be kept',
         dest='keep_checkpoint_max')
     parser.add_argument(
         '-optimizer', type=str, default='adam',
