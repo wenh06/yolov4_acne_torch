@@ -445,8 +445,11 @@ def evaluate(model, data_loader, cfg, device, logger, **kwargs):
             boxes[...,2] = boxes[...,2]*img_width
             boxes[...,3] = boxes[...,3]*img_height
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
-            labels = torch.as_tensor(np.zeros((len(output),)), dtype=torch.int64)
-            scores = torch.as_tensor(output[...,-1], dtype=torch.float32)
+            confs = output[...,4:].copy()
+            labels = np.argmax(confs, axis=1).flatten()
+            labels = torch.as_tensor(labels, dtype=torch.int64)
+            scores = np.max(confs, axis=1).flatten()
+            scores = torch.as_tensor(scores, dtype=torch.float32)
             res[target["image_id"].item()] = {
                 "boxes": boxes,
                 "scores": scores,
