@@ -34,7 +34,7 @@ class ACNE04(Yolo_dataset):
     def __init__(self, label_path:str, cfg:ED, train:bool=True):
         """
         unlike in Yolo_dataset where the labels are stored in a txt file,
-        with each line cls,x_center,y_center,w,h,
+        with each line xmin,ymin,xmax,ymax,id ...
         annotations of ACNE04 are already converted into a csv file
         """
         if cfg.mixup == 2:
