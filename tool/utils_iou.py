@@ -179,7 +179,8 @@ def bboxes_iou(bboxes_a, bboxes_b, fmt='voc', iou_type='iou'):
     eps = 1e-7
     v = torch.clamp(v, -1+eps, 1-eps)
     v = (_true_divide(2*torch.acos(v), np.pi)).pow(2)
-    alpha = (_true_divide(v, 1-iou+v)) * ((iou>=0.5).type(iou.type()))
+    with torch.no_grad():
+        alpha = (_true_divide(v, 1-iou+v)) * ((iou>=0.5).type(iou.type()))
 
     ciou = diou - alpha * v
 
