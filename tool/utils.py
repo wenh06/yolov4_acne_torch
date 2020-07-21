@@ -62,8 +62,8 @@ def nms_cpu(boxes, confs, nms_thresh=0.5, min_mode=False):
     # print(boxes.shape)
     x1 = boxes[:, 0]
     y1 = boxes[:, 1]
-    x2 = boxes[:, 0] + boxes[:, 2]
-    y2 = boxes[:, 1] + boxes[:, 3]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
 
     areas = (x2 - x1) * (y2 - y1)
     order = confs.argsort()[::-1]
@@ -117,11 +117,18 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     height = img_with_boxes.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
+<<<<<<< HEAD
         # yolo format to voc format
         x1 = int((box[0] - box[2] / 2.0) * width)
         y1 = int((box[1] - box[3] / 2.0) * height)
         x2 = int((box[0] + box[2] / 2.0) * width)
         y2 = int((box[1] + box[3] / 2.0) * height)
+=======
+        x1 = int(box[0] * width)
+        y1 = int(box[1] * height)
+        x2 = int(box[2] * width)
+        y2 = int(box[3] * height)
+>>>>>>> fa60ecf7421fab85e552b9e00e869cf4ff077d33
 
         if color:
             rgb = color
@@ -176,6 +183,11 @@ def post_processing(img, conf_thresh, nms_thresh, output):
     # anchor_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     # strides = [8, 16, 32]
     # anchor_step = len(anchors) // num_anchors
+
+    # [batch, num, 1, 4]
+    box_array = output[0]
+    # [batch, num, num_classes]
+    confs = output[1]
 
     t1 = time.time()
 
