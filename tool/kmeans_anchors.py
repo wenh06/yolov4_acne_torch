@@ -6,6 +6,8 @@ References:
 """
 
 import numpy as np
+from scipy.cluster.vq import kmeans
+import torch
 
 
 def iou(box, clusters):
@@ -87,7 +89,7 @@ def kmeans_anchors(boxes, k, dist=np.median):
     return clusters
 
 
-def kmeans_anchors_ultralytics(img_shapes:np.ndarray, img_boxes:np.ndarray, n:int, tgt_size:int, thr:float=4.0, gen:int=1000, verbose:int=1):
+def kmeans_anchors_ultralytics(boxes:np.ndarray, n:int, thr:float=4.0, gen:int=1000, verbose:int=1):
     """ NOT finished,
     
     Creates kmeans-evolved anchors from training dataset
@@ -117,8 +119,7 @@ def kmeans_anchors_ultralytics(img_shapes:np.ndarray, img_boxes:np.ndarray, n:in
             print('%i,%i' % (round(x[0]), round(x[1])), end=',  ' if i < len(k) - 1 else '\n')  # use in *.cfg
         return k
 
-    _img_shapes = tgt_size * img_shapes / img_shapes.max(1, keepdims=True)
-    wh0 = np.concatenate([l * s for s, l in zip(_img_shapes, img_boxes)])  # wh
+    wh0 = boxes.copy()  # wh
 
     # Filter
     i = (wh0 < 3.0).any(1).sum()
@@ -136,19 +137,6 @@ def kmeans_anchors_ultralytics(img_shapes:np.ndarray, img_boxes:np.ndarray, n:in
     wh0 = torch.tensor(wh0, dtype=torch.float32)  # unflitered
     k = print_results(k)
 
-    # Plot
-    # k, d = [None] * 20, [None] * 20
-    # for i in tqdm(range(1, 21)):
-    #     k[i-1], d[i-1] = kmeans(wh / s, i)  # points, mean distance
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7))
-    # ax = ax.ravel()
-    # ax[0].plot(np.arange(1, 21), np.array(d) ** 2, marker='.')
-    # fig, ax = plt.subplots(1, 2, figsize=(14, 7))  # plot wh
-    # ax[0].hist(wh[wh[:, 0]<100, 0],400)
-    # ax[1].hist(wh[wh[:, 1]<100, 1],400)
-    # fig.tight_layout()
-    # fig.savefig('wh.png', dpi=200)
-
     # Evolve
     npr = np.random
     f, sh, mp, s = fitness(k), k.shape, 0.9, 0.1  # fitness, generations, mutation prob, sigma
@@ -162,7 +150,35 @@ def kmeans_anchors_ultralytics(img_shapes:np.ndarray, img_boxes:np.ndarray, n:in
         if fg > f:
             f, k = fg, kg.copy()
             pbar.desc = 'Evolving anchors with Genetic Algorithm: fitness = %.4f' % f
-            if verbose:
+            if verbose >= 1:
                 print_results(k)
 
     return print_results(k)
+
+
+
+if __name__ == "__main__":
+    import os
+    from cfg_acne04 import Cfg
+    from dataset_acne04 import ACNE04
+    train_dataset = ACNE04(label_path=Cfg.train_label, cfg=Cfg, train=True)
+    val_dataset = ACNE04(label_path=Cfg.val_label, cfg=Cfg, train=False)
+    bb = []
+    for idx in range(len(train_dataset)):
+        b = train_dataset._get_val_item(idx)[1]['boxes'][...,2:].numpy()
+        h,w = train_dataset._get_val_item(idx)[0].shape[:2]
+        b[...,0] = b[...,0] * tgt_size / w
+        b[...,1] = b[...,1] * tgt_size / h
+        bb.append(b)
+    for idx in range(len(val_dataset)):
+        b = val_dataset._get_val_item(idx)[1]['boxes'][...,2:].numpy()
+        h,w = val_dataset._get_val_item(idx)[0].shape[:2]
+        b[...,0] = b[...,0] * tgt_size / w
+        b[...,1] = b[...,1] * tgt_size / h
+        bb.append(b)
+    all_bb = np.concatenate(bb)
+    print(f"all_bb.shape = {all_bb.shape}")
+    anchors = kmeans_anchors(all_bb, 7)
+    anchors = np.round(anchors)
+    print(f"anchors = {anchors.tolist}")
+    np.save(os.path.join(Cfg.TRAIN_TENSORBOARD_DIR, "anchors.npy"), anchors)
