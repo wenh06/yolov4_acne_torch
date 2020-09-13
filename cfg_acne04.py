@@ -40,10 +40,8 @@ Cfg.blur = 0
 Cfg.gaussian = 0
 Cfg.boxes = 200  # box num
 Cfg.TRAIN_EPOCHS = 450
-Cfg.train_label = '/mnt/wenhao71/data/acne04/train.csv'
-Cfg.val_label = '/mnt/wenhao71/data/acne04/val.csv'
-# Cfg.train_label = '/mnt/wenhao71/data/acne04_new/train.csv'
-# Cfg.val_label = '/mnt/wenhao71/data/acne04_new/val.csv'
+Cfg.train_label = '/media/cfs/wenhao71/data/acne04/train.csv'
+Cfg.val_label = '/media/cfs/wenhao71/data/acne04/val.csv'
 Cfg.TRAIN_OPTIMIZER = 'adam'
 '''
 original data generator accepted format:
@@ -60,14 +58,14 @@ elif Cfg.mosaic:
     Cfg.mixup = 3
 
 # Cfg.checkpoints = 'checkpoints'
-Cfg.checkpoints = '/mnt/wenhao71/workspace/yolov4_acne_torch/saved_models/'
-Cfg.TRAIN_TENSORBOARD_DIR = '/mnt/wenhao71/workspace/yolov4_acne_torch/log/'
+Cfg.checkpoints = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/saved_models/'
+Cfg.TRAIN_TENSORBOARD_DIR = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/log/'
 
-Cfg.dataset_dir = '/mnt/wenhao71/data/acne04/filtered_images/'
+Cfg.dataset_dir = '/media/cfs/wenhao71/data/acne04/filtered_images/'
 
 # yolov4conv137weight
-Cfg.pretrained = '/mnt/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.conv.137.pth'
+Cfg.pretrained = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.conv.137.pth'
 
 Cfg.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
-Cfg.keep_checkpoint_max = 10
+Cfg.keep_checkpoint_max = 20

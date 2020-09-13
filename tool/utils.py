@@ -2,11 +2,18 @@ import sys
 import os
 import time
 import math
-import numpy as np
-
 import itertools
 import struct  # get_image_size
 import imghdr  # get_image_size
+
+import numpy as np
+
+
+__all__ = [
+    "nms_cpu",
+    "plot_boxes_cv2",
+    "post_processing",
+]
 
 
 def sigmoid(x):
@@ -117,18 +124,10 @@ def plot_boxes_cv2(img, boxes, savename=None, class_names=None, color=None):
     height = img_with_boxes.shape[0]
     for i in range(len(boxes)):
         box = boxes[i]
-<<<<<<< HEAD
-        # yolo format to voc format
-        x1 = int((box[0] - box[2] / 2.0) * width)
-        y1 = int((box[1] - box[3] / 2.0) * height)
-        x2 = int((box[0] + box[2] / 2.0) * width)
-        y2 = int((box[1] + box[3] / 2.0) * height)
-=======
         x1 = int(box[0] * width)
         y1 = int(box[1] * height)
         x2 = int(box[2] * width)
         y2 = int(box[3] * height)
->>>>>>> fa60ecf7421fab85e552b9e00e869cf4ff077d33
 
         if color:
             rgb = color
