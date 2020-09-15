@@ -58,13 +58,13 @@ elif Cfg.mosaic:
     Cfg.mixup = 3
 
 # Cfg.checkpoints = 'checkpoints'
-Cfg.checkpoints = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/saved_models/'
-Cfg.TRAIN_TENSORBOARD_DIR = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/log/'
+Cfg.checkpoints = os.path.join(_BASE_DIR, "saved_models")
+Cfg.TRAIN_TENSORBOARD_DIR = os.path.join(_BASE_DIR, "log")
 
 Cfg.dataset_dir = '/media/cfs/wenhao71/data/acne04/filtered_images/'
 
 # yolov4conv137weight
-Cfg.pretrained = '/media/cfs/wenhao71/workspace/yolov4_acne_torch/pretrained/yolov4.conv.137.pth'
+Cfg.pretrained = os.path.join(_BASE_DIR, "pretrained", "yolov4.conv.137.pth")
 
 Cfg.iou_type = 'iou'  # 'giou', 'diou', 'ciou'
 
